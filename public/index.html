@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+	<head>
+	<title>VidStream</title>
+	<!--external stylesheet-->
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<!--connect to Google Fonts-->
+	<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Lato">
+	<!--open source videojs player-->
+	<link href="//vjs.zencdn.net/4.12/video-js.css" rel="stylesheet">
+	<!--jQuery library; must be referenced before Angular to get the full version-->
+	<script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+	<!--AngularJS framework-->
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0/angular.min.js"></script>
+	<!--Animations extension to AngularJS-->
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0/angular-animate.js"></script>
+	<!--Socket.IO for websocket communication-->
+	<script src="./socket.io/socket.io.js"></script>
+	<!--Socket.IO stream for uploading files-->
+	<script src="socket.io-stream.js"></script>
+	<!--videojs-->
+	<script src="//vjs.zencdn.net/4.12/video.js"></script>
+	<!--Angular user-defined controllers-->
+	<script src="controllers.js"></script>
+	<!--Angular user-defined directives-->
+	<script src="directives.js"></script>
+	<style type="text/css">
+		body { font-family: 'Lato', serif; }
+	</style>
+</head>
+<!--ng-app declares this as an Angular application-->
+<body ng-app="VidStreamApp" style="background-color: #F8F8F8">
+	<!--drag-and-drop directive allows for event interception on the whole container-->
+	<div ng-controller="mainController" style="height: 100%" drag-and-drop>
+		<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
+		<div ng-show="progress" style="width: 200px; height: 20px; margin: 20px"><progress-bar></progress-bar></div>
+		<div style="padding: 20px">
+			<video id="video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" width="640" height="360" data-setup="{}">
+				<source src="./download?file=ffa374928315fd3a7ba803436b8c7de1.mp4" type='video/mp4'>
+			</video>
+		</div>
+	</div>
+</body>
+</html>

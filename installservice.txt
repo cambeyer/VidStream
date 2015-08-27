@@ -1,0 +1,1 @@
+forever-service install -s index.js --start VidStream

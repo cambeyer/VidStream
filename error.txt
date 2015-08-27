@@ -1,0 +1,42 @@
+Command line: ffmpeg -i pipe:0 -y -acodec aac -strict experimental -vcodec libx264 -f mp4 -pix_fmt yuv420p -movflags faststart /home/ubuntu/VidStream/files/GraduationSpeech.m4v.mp4
+ffmpeg version N-73370-gc9220d5 Copyright (c) 2000-2015 the FFmpeg developers
+  built with gcc 4.8 (Ubuntu 4.8.2-19ubuntu1)
+  configuration: --prefix=/root/ffmpeg_build --pkg-config-flags=--static --extra-cflags=-I/root/ffmpeg_build/include --extra-ldflags=-L/root/ffmpeg_build/lib --bindir=/root/bin --enable-gpl --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree
+  libavutil      54. 27.100 / 54. 27.100
+  libavcodec     56. 46.100 / 56. 46.100
+  libavformat    56. 40.100 / 56. 40.100
+  libavdevice    56.  4.100 / 56.  4.100
+  libavfilter     5. 19.100 /  5. 19.100
+  libswscale      3.  1.101 /  3.  1.101
+  libswresample   1.  2.100 /  1.  2.100
+  libpostproc    53.  3.100 / 53.  3.100
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x3ff2420] stream 1, offset 0xa8: partial file
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x3ff2420] Could not find codec parameters for stream 0 (Video: h264 (avc1 / 0x31637661), none(bt470bg/smpte240m/bt709), 704x480, 1892 kb/s): unspecified pixel format
+Consider increasing the value for the 'analyzeduration' and 'probesize' options
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x3ff2420] Could not find codec parameters for stream 2 (Audio: ac3 (ac-3 / 0x332D6361), 0 channels, fltp): unspecified sample rate
+Consider increasing the value for the 'analyzeduration' and 'probesize' options
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'pipe:0':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isomavc1
+    creation_time   : 2011-05-28 00:52:36
+    encoder         : HandBrake 0.9.5 2011043000
+  Duration: 00:04:22.02, bitrate: N/A
+    Stream #0:0(und): Video: h264 (avc1 / 0x31637661), none(bt470bg/smpte240m/bt709), 704x480, 1892 kb/s, SAR 2560:2151 DAR 11264:6453, 28.21 fps, 29.97 tbr, 90k tbn, 180k tbc (default)
+    Metadata:
+      creation_time   : 2011-05-28 00:52:36
+      encoder         : JVT/AVC Coding
+    Stream #0:1(und): Audio: aac (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 159 kb/s (default)
+    Metadata:
+      creation_time   : 2011-05-28 00:52:36
+    Stream #0:2(und): Audio: ac3 (ac-3 / 0x332D6361), 0 channels, fltp
+    Metadata:
+      creation_time   : 2011-05-28 00:52:36
+    Side data:
+      audio service type: main
+[buffer @ 0x3ff22c0] Unable to parse option value "-1" as pixel format
+    Last message repeated 1 times
+[buffer @ 0x3ff22c0] Error setting option pix_fmt to value -1.
+[graph 0 input from stream 0:0 @ 0x3ff21c0] Error applying options to the filter.
+Error opening filters!
