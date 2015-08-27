@@ -1,45 +1,34 @@
 //all of the user-defined Angular directives
 angular.module('VidStreamApp.directives', []).
 directive('loginform', function() {
-	//directive to display the login form
-	//bound to the list of classes, terms, years
-	//also bound to the login model and function to handle authentication
 	return {
 		scope: false,
 		replace: true,
 		restrict: 'E',
 		template: '' +
-			'<form ng-submit="sendLogin()">' +
-				'<table style="background-color: #66C166; color: white; padding: 30px; padding-left: 100px; padding-right: 100px; border-radius: 10px; border: 1px solid white" cellpadding="20" cellspacing="0" border="0" align="center">' +
+			'<form ng-submit="login()">' +
+				'<table style="background-color: #4558A7; color: white; padding: 30px; padding-left: 100px; padding-right: 100px; border-radius: 10px; border: 1px solid white" cellpadding="20" cellspacing="0" border="0" align="center">' +
 					'<tr>' +
 						'<td colspan="2">' +
-							'<h2>ClassMatic Login</h2>' +
-							'<span ng-if="error" style="color: #FFCCCC"><br>Incorrect login credentials, or you are not registered for courses</span>' +
-							'<span ng-show="loading"><img src="loading.gif" style="max-width: 40px"></span>' +
+							'<h2>VidStream Login</h2><span ng-if="error" style="color: red"><br>Incorrect login credentials</span>' +
 						'</td>' +
 					'</tr>' +
 					'<tr>' +
-						'<td>Banner ID:</td>' +
+						'<td>Username:</td>' +
 						'<td>' +
-							'<input class="loginctrl" type="text" ng-model="login.sid">' +
+							'<input type="text" ng-model="fields.username">' +
 						'</td>' +
 					'</tr>' +
 					'<tr>' +
-						'<td>PIN:</td>' +
+						'<td>Password:</td>' +
 						'<td>' +
-							'<input class="loginctrl" type="password" ng-model="login.pin">' +
+							'<input type="password" ng-model="fields.password">' +
 						'</td>' +
 					'</tr>' +
-					'<tr>' +
-						'<td>Term:</td>' +
-						'<td>' +
-							'<select ng-model="login.term" ng-options="term for term in terms" ng-init="buildTerms()" style="float: left; width: 45%"><option ng-if="false"></option></select>' +
-							'<select ng-model="login.year" ng-options="year for year in years" ng-init="buildYears()" style="float: right; width: 45%"><option ng-if="false"></option></select>' +
-						'</td>' +
 					'</tr>' +
 					'<tr>' +
 						'<td colspan="2">' +
-							'<input class="mySubmit" type="submit" value="">' +
+							'<input type="submit" value="Submit">' +
 						'</td>' +
 					'</tr>' +
 				'</table>' +

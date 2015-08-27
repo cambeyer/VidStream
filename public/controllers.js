@@ -7,6 +7,13 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	$scope.uploadPercent = 0;
 	$scope.processPercent = 0;
 
+	$scope.authed = false;
+
+	$scope.fields = {
+		username: "",
+		password: "",
+	};
+
 	//initialize the Socket.IO environment
 	$scope.socket = io();
 
@@ -37,9 +44,29 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 		oReq.send(oData);
 	}
 
-	//whenever the socket disconnects and reconnects, request the files from the server
 	$scope.socket.on('reconnect', function(num) {
-		//nothing
+		$scope.login();
+	});
+
+	$scope.login = function() {
+		if ($scope.fields.username && $scope.fields.password) {
+			var login = {};
+			login.username = $scope.fields.username;
+			login.password = $scope.fields.password;
+			$scope.socket.emit('login', login);
+		}
+	}
+
+	$scope.socket.on('login', function (successBool) {
+		$scope.$apply(function () {
+			$scope.authed = successBool;
+			if (!$scope.authed) {
+				$scope.error = true;
+			} else {
+				$scope.error = false;
+				//load list of videos from the server
+			}
+		});
 	});
 
 	$scope.socket.on('progress', function (msg){

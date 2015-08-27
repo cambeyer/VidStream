@@ -8,6 +8,12 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var crypto = require('crypto');
 var ffmpeg = require('fluent-ffmpeg');
+var ActiveDirectory = require('activedirectory');
+
+var domain = "na1.ford.com";
+var domainController = "ECCNA109.na1.ford.com";
+
+var ad = new ActiveDirectory({ url: 'ldap://' + domainController, baseDN: 'dc=na1,dc=ford,dc=com' });
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -155,6 +161,32 @@ io.on('connection', function(socket) {
 		}
 		processing[md5] = socket;
 		socket.emit('progress', 0);
+	});
+	socket.on('login', function(userObj) {
+		socket.emit('login', true);
+		return;
+		if (userObj.username && userObj.password) {
+			ad.authenticate(userObj.username + "@" + domain, userObj.password, function(err, auth) {
+				if (err) {
+					console.log("Error: could not authenticate user " + userObj.username);
+					socket.emit('login', false);
+					return;
+				}
+				if (auth) {
+					console.log("Successfully authenticated user " + userObj.username);
+					socket.emit('login', true);
+					return;
+				}
+				else {
+					console.log("Could not authenticate user " + userObj.username);
+					socket.emit('login', false);
+					return;
+				}
+			});
+		} else {
+			socket.emit('login', false);
+			return;
+		}
 	});
 });
 
