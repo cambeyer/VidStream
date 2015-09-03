@@ -2,7 +2,6 @@ var express = require('express');
 var app = express();
 var busboy = require('connect-busboy');
 var path = require('path');
-var request = require('request');
 var fs = require('fs-extra');
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
@@ -135,6 +134,7 @@ app.get('/download', function(req, res){
 
 			res.writeHead(200, {
 				'Content-Length': total,
+				"Accept-Ranges": "bytes",
 				'Content-Type': 'video/mp4'
 			});
 			var stream = fs.createReadStream(file)
