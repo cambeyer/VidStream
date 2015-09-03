@@ -8,6 +8,7 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	$scope.processPercent = 0;
 
 	$scope.authed = false;
+	$scope.authing = false;
 
 	$scope.fields = {
 		username: "",
@@ -50,21 +51,27 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 
 	$scope.login = function() {
 		if ($scope.fields.username && $scope.fields.password) {
+			$scope.authing = true;
 			$scope.socket.emit('login', $scope.fields.username);
 		}
 	}
 
 	$scope.socket.on('encrypt', function (publicKey) {
-		var encryptor = new JSEncrypt();
-		encryptor.setPublicKey(publicKey);
-		var response = {};
-		response.username = $scope.fields.username;
-		response.message = encryptor.encrypt($scope.fields.password);
-		$scope.socket.emit('encrypt', response);
+		if ($scope.authing) {
+			var encryptor = new JSEncrypt();
+			encryptor.setPublicKey(publicKey);
+			var response = {};
+			response.username = $scope.fields.username;
+			response.message = encryptor.encrypt($scope.fields.password);
+			$scope.socket.emit('encrypt', response);
+		} else {
+			//Hacking attempt detected
+		}
 	});
 
 	$scope.socket.on('login', function (successBool) {
 		$scope.$apply(function () {
+			$scope.authing = false;
 			$scope.authed = successBool;
 			if (!$scope.authed) {
 				$scope.error = true;

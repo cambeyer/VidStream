@@ -7,16 +7,9 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var crypto = require('crypto');
 var NodeRSA = require('node-rsa');
+var rand = require('csprng');
 var ffmpeg = require('fluent-ffmpeg');
-/*
-//Code for AD
-var ActiveDirectory = require('activedirectory');
-
-var domain = "na1.ford.com";
-var domainController = "ECCNA109.na1.ford.com";
-
-var ad = new ActiveDirectory({ url: 'ldap://' + domainController, baseDN: 'dc=na1,dc=ford,dc=com' });
-*/
+var Datastore = require('nedb');
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -29,6 +22,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 var processing = {};
 var done = [];
 var userKeys = {};
+
+var db = {}
+db.users = new Datastore({ filename: dir + "users.db", autoload: true });
+db.users.persistence.setAutocompactionInterval(200000);
+
+//var userDB = { yes: { salt: 'fqvw8eglcw12dkqo43fq6qd81', hash: '7f05c6fa7f0c72fe9b8f33ddd23fbe74d54d92e4cefc6aceea2941fb0dee37ebc962d1d9ca23f2b5867c9887242c9ef2fa813614e67b9864f37b4c87876675ce65cde948175238df90b4ed368fbe3187edfc6cc8ccd1c10bfaa2eee0066da8ce90d2e500255e3e110a10ae92a6656634711bf54cc62e67e807ae7ca0afdd9cae54f4c5139da2d06cdd77e11e10eb15092172677e5c1267dd7fd96c976f472a3f728b460f70fb236877c1ca0e3bfaebd521ee3e43c97e1639040c423237bd6ef50545eb1f1f73f86eeb6fc167f291406bda6a314e80eeabfc5975c13067a17c1ecc17cbc922046c74299f676804301b06f674e0d858b06533bc4429b4999d6c42c5f62899949e5162913cf1b319aa8bf35729b973606c048cf0ecde7eb81976172fa056dff09fbecbee4bf6cc3a12b4875486b3e7982a1265d6c0a3397136948976736e382629b4c4af802d9b0c6879236930bbc7d49ddac328a9ce99e7911bdb3db9cbb03f98e4bf4968f7f757da5510b0529a127ab48e256c4121f7ecbb0b4da2a0fdd3c6c116e0760429d097b307275ccc8884e7bc15e29724be876bd4545a0856eae71dce2272a2615e955b0a3b5afba36f20738815fa0bdd67514b09e34d3da25d69bcd20321e4077fc055690a1d012ac53c18c071b20a06a02c36c27ce1e17fc2c76862dad6716d5beed7af9f466cdf897931fb5af69fa2a9cec027fe5d' }};
 
 app.route('/upload').post(function (req, res, next) {
 	var hash = crypto.createHash('md5');
@@ -176,14 +175,42 @@ io.on('connection', function(socket) {
 	});
 	socket.on('encrypt', function(encrypted) {
 		try {
-			var salt = "random";
-			var hashed = crypto.createHash('md5').update(userKeys[encrypted.username].keyPair.decrypt(encrypted.message, 'utf8') + salt).digest('hex');
-			//console.log("Hashed password for " + encrypted.username + ": " + hashed);
-			//hash the decrypted value and compare that with a database lookup
+			var password = userKeys[encrypted.username].keyPair.decrypt(encrypted.message, 'utf8');
+			db.users.findOne({ username: encrypted.username }, function (err, user) {
+				if (!err) {
+					if (!user) {
+						var userObj = {};
+						userObj.username = encrypted.username;
+						userObj.salt = rand(128, 36);
+						userObj.hash = crypto.pbkdf2Sync(password, userObj.salt, 10000, 512).toString('hex');
+						db.users.insert(userObj, function (err) {
+							if (!err) {
+								console.log("Registered new user: " + userObj.username);
+								socket.emit('login', true);
+							} else {
+								console.log("DB insert error");
+								socket.emit('login', false);
+							}
+						});
+					} else {
+						if (crypto.pbkdf2Sync(password, user.salt, 10000, 512).toString('hex') == user.hash) {
+							console.log("Successfully logged in user: " + user.username)
+							socket.emit('login', true);
+						} else {
+							socket.emit('login', false);
+						}
+					}
+				} else {
+					console.log("DB lookup error");
+				}
+			});
 		} catch (e) {
+			console.log("Decryption error");
 			socket.emit('login', false);
 		}
-		socket.emit('login', true);
+		if (userKeys[encrypted.username]) {
+			delete userKeys[encrypted.username];
+		}
 	});
 });
 
