@@ -16,19 +16,19 @@ directive('loginform', function() {
 					'<tr>' +
 						'<td>Username:</td>' +
 						'<td>' +
-							'<input type="text" ng-model="fields.username">' +
+							'<input class="loginctrl" type="text" ng-model="fields.username">' +
 						'</td>' +
 					'</tr>' +
 					'<tr>' +
 						'<td>Password:</td>' +
 						'<td>' +
-							'<input type="password" ng-model="fields.password">' +
+							'<input class="loginctrl" type="password" ng-model="fields.password">' +
 						'</td>' +
 					'</tr>' +
 					'</tr>' +
 					'<tr>' +
 						'<td colspan="2">' +
-							'<input type="submit" value="Submit">' +
+							'<input class="mySubmit" type="submit" value="">' +
 						'</td>' +
 					'</tr>' +
 				'</table>' +

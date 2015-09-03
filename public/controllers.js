@@ -52,10 +52,15 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 		if ($scope.fields.username && $scope.fields.password) {
 			var login = {};
 			login.username = $scope.fields.username;
-			login.password = $scope.fields.password;
 			$scope.socket.emit('login', login);
 		}
 	}
+
+	$scope.socket.on('encrypt', function (publicKey) {
+		var encryptor = new JSEncrypt();
+		encryptor.setPublicKey(publicKey);
+		$scope.socket.emit('encrypt', encryptor.encrypt($scope.fields.password));
+	});
 
 	$scope.socket.on('login', function (successBool) {
 		$scope.$apply(function () {

@@ -8,12 +8,15 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var crypto = require('crypto');
 var ffmpeg = require('fluent-ffmpeg');
+/*
+//Code for AD
 var ActiveDirectory = require('activedirectory');
 
 var domain = "na1.ford.com";
 var domainController = "ECCNA109.na1.ford.com";
 
 var ad = new ActiveDirectory({ url: 'ldap://' + domainController, baseDN: 'dc=na1,dc=ford,dc=com' });
+*/
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -76,7 +79,7 @@ app.route('/upload').post(function (req, res, next) {
 					fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
 				})
 				.on('error', function(err, stdout, stderr) {
-					console.log(stderr);
+					console.log("Transcoding issue: " + stderr);
 				})
 				.save(dir + md5 + ".mp4");
 		});
@@ -163,30 +166,14 @@ io.on('connection', function(socket) {
 		socket.emit('progress', 0);
 	});
 	socket.on('login', function(userObj) {
-		socket.emit('login', true);
-		return;
-		if (userObj.username && userObj.password) {
-			ad.authenticate(userObj.username + "@" + domain, userObj.password, function(err, auth) {
-				if (err) {
-					console.log("Error: could not authenticate user " + userObj.username);
-					socket.emit('login', false);
-					return;
-				}
-				if (auth) {
-					console.log("Successfully authenticated user " + userObj.username);
-					socket.emit('login', true);
-					return;
-				}
-				else {
-					console.log("Could not authenticate user " + userObj.username);
-					socket.emit('login', false);
-					return;
-				}
-			});
+		if (userObj.username) {
+			socket.emit('encrypt', "-----BEGIN PUBLIC KEY----- MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDlOJu6TyygqxfWT7eLtGDwajtN FOb9I5XRb6khyfD1Yt3YiCgQWMNW649887VGJiGr/L5i2osbl8C9+WJTeucF+S76 xFxdU6jE0NQ+Z+zEdhUTooNRaY5nZiu5PgDB0ED/ZKBUSLKL7eibMxZtMlUDHjm4 gwQco1KRMDSmXSMkDwIDAQAB -----END PUBLIC KEY-----");
 		} else {
 			socket.emit('login', false);
-			return;
 		}
+	});
+	socket.on('encrypt', function(encrypted) {
+		socket.emit('login', true);
 	});
 });
 

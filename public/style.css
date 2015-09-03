@@ -96,7 +96,7 @@ select {
 	-webkit-appearance: none;
 	-moz-appearance: none;
 	appearance: none;
-} 
+}
 
 .noselect {
     -webkit-touch-callout: none;
@@ -105,8 +105,4 @@ select {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
-}
-
-.AnyTime-pkr {
-	z-index: 999999
 }
