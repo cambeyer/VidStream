@@ -7,8 +7,9 @@
 	<link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Lato">
 	<link href="//vjs.zencdn.net/4.12/video-js.css" rel="stylesheet">
 	<script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
-	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0/angular.min.js"></script>
-	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0/angular-animate.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.0/angular.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.0/angular-animate.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.0/angular-cookies.js"></script>
 	<script src="./socket.io/socket.io.js"></script>
 	<script src="//vjs.zencdn.net/4.12/video.js"></script>
 	<script src="jsencrypt.js"></script>
@@ -33,6 +34,7 @@
 		</div>
 
 		<div ng-show="authed" drag-and-drop style="height: 100%">
+			<button ng-click="logout()">Logout</button>
 			<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
 			<div ng-show="progress" style="width: 200px; height: 20px; margin: 20px"><progress-bar></progress-bar></div>
 			<div style="padding: 20px">

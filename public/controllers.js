@@ -1,7 +1,7 @@
 angular.module('VidStreamApp', ['VidStreamApp.controllers', 'VidStreamApp.directives', 'ngAnimate']);
 
 //main Angular module
-angular.module('VidStreamApp.controllers', []).controller('mainController', function($scope, $rootScope, $interval, $timeout) {
+angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainController', function($scope, $rootScope, $interval, $timeout, $cookies, $document, $window) {
 
 	$scope.progress = false;
 	$scope.uploadPercent = 0;
@@ -12,6 +12,7 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	$scope.loading = false;
 
 	$scope.confirmPassword = false;
+	$scope.hash = "";
 
 	$scope.fields = {
 		username: "",
@@ -22,9 +23,22 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	//initialize the Socket.IO environment
 	$scope.socket = io();
 
-	angular.element(document).ready(function () {
+	$document.ready(function () {
 		$('#username').focus();
+		if ($cookies.get('username')) {
+			$scope.$apply(function() {
+				$scope.fields.username = $cookies.get('username');
+				$scope.hash = $cookies.get('hash');
+			});
+			$scope.login();
+		}
 	});
+
+	$scope.logout = function() {
+		$cookies.remove('username');
+		$cookies.remove('hash');
+		$window.location.reload();
+	}
 
 	$scope.uploadFile = function() {
 		var oData = new FormData();
@@ -64,7 +78,7 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	}
 
 	$scope.login = function() {
-		if ($scope.fields.username && $scope.fields.password) {
+		if ($scope.fields.username && ($scope.fields.password || $scope.hash)) {
 			$scope.authing = true;
 			$scope.loading = true;
 			$scope.error = false;
@@ -112,7 +126,10 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 		encryptor.setPublicKey(publicKey);
 		var response = {};
 		response.username = $scope.fields.username;
-		response.message = encryptor.encrypt(CryptoJS.MD5($scope.fields.password).toString());
+		if (!$scope.hash) {
+			$scope.hash = CryptoJS.MD5($scope.fields.password).toString();
+		}
+		response.message = encryptor.encrypt($scope.hash);
 		$scope.socket.emit('encrypt', response);
 	}
 
@@ -123,8 +140,14 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 			$scope.authed = successBool;
 			if (!$scope.authed) {
 				$scope.error = true;
+				$scope.hash = "";
+				$scope.fields.password = "";
 			} else {
 				$scope.error = false;
+				$cookies.put('username', $scope.fields.username);
+				$cookies.put('hash', $scope.hash)
+				$scope.hash = "";
+				$scope.fields.password = ""; //blank this? token instead?
 				//load list of videos from the server
 			}
 		});

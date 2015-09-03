@@ -12,16 +12,15 @@ directive('loginform', function() {
 						'<td colspan="2">' +
 							'<h2>VidStream Sign Up/Login</h2>' +
 							'<span ng-if="error" style="color: red"><br>Incorrect login credentials</span>' +
-							'<span ng-show="loading"><img src="loading.gif" style="max-width: 40px"></span>' +
 						'</td>' +
 					'</tr>' +
 					'<tr>' +
 						'<td>Username:</td>' +
 						'<td>' +
-							'<input id="username" class="loginctrl" type="text" ng-change="resetControls()" ng-model="fields.username" ng-trim="false" maxlength="20">' +
+							'<input id="username" ng-disabled="hash" class="loginctrl" type="text" ng-change="resetControls()" ng-model="fields.username" ng-trim="false" maxlength="20">' +
 						'</td>' +
 					'</tr>' +
-					'<tr>' +
+					'<tr ng-show="!hash">' +
 						'<td>Password:</td>' +
 						'<td>' +
 							'<input id="password" class="loginctrl" type="password" maxlength="128" ng-model="fields.password">' +
@@ -33,11 +32,10 @@ directive('loginform', function() {
 							'<input id="confirm" class="loginctrl" type="password" maxlength="128" ng-model="fields.passwordConfirm">' +
 						'</td>' +
 					'</tr>' +
-					'</tr>' +
 					'<tr>' +
 						'<td colspan="2">' +
-							'<input class="mySubmit" type="submit" value="">' +
-
+							'<input ng-show="!loading && !hash" class="mySubmit" type="submit" value="">' +
+							'<span ng-show="loading"><img src="loading.gif" style="max-width: 60px"></span>' +
 						'</td>' +
 					'</tr>' +
 				'</table>' +
