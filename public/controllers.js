@@ -1,7 +1,7 @@
 angular.module('VidStreamApp', ['VidStreamApp.controllers', 'VidStreamApp.directives', 'ngAnimate']);
 
 //main Angular module
-angular.module('VidStreamApp.controllers', []).controller('mainController', function($scope, $rootScope, $interval) {
+angular.module('VidStreamApp.controllers', []).controller('mainController', function($scope, $rootScope, $interval, $timeout) {
 
 	$scope.progress = false;
 	$scope.uploadPercent = 0;
@@ -9,6 +9,7 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 
 	$scope.authed = false;
 	$scope.authing = false;
+	$scope.loading = false;
 
 	$scope.confirmPassword = false;
 
@@ -20,6 +21,10 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 
 	//initialize the Socket.IO environment
 	$scope.socket = io();
+
+	angular.element(document).ready(function () {
+		$('#username').focus();
+	});
 
 	$scope.uploadFile = function() {
 		var oData = new FormData();
@@ -52,22 +57,31 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 		$scope.login();
 	});
 
+	$scope.resetControls = function() {
+		$scope.confirmPassword = false;
+		$scope.fields.passwordConfirm = "";
+		$scope.fields.username = $scope.fields.username.replace(/\W/g, '');
+	}
+
 	$scope.login = function() {
 		if ($scope.fields.username && $scope.fields.password) {
 			$scope.authing = true;
+			$scope.loading = true;
+			$scope.error = false;
 			if ($scope.confirmPassword) {
 				if ($scope.fields.passwordConfirm == $scope.fields.password) {
 					alert("Welcome to VidStream; your account will now be created");
 					$scope.sendEncrypted($scope.tempKey);
-					$scope.$apply(function () {
-						$scope.confirmPassword = false;
-					});
+					$scope.confirmPassword = false;
 				} else {
 					alert("Your passwords do not match");
-					$scope.$apply(function () {
-						$scope.fields.password = "";
-						$scope.authing = false;
-					});
+					$scope.fields.password = "";
+					$scope.fields.passwordConfirm = "";
+					$scope.authing = false;
+					$scope.loading = false;
+					$timeout(function() {
+						$('#password').focus();
+					}, 0, false);
 				}
 			} else {
 				$scope.socket.emit('login', $scope.fields.username);
@@ -78,11 +92,13 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	$scope.socket.on('encrypt', function (requestObj) {
 		if ($scope.authing) {
 			if (requestObj.newUser) {
-				alert("Please confirm your password to create your account.");
+				//alert("Please confirm your password to create your account.");
 				$scope.$apply(function () {
-					$scope.confirmPassword = true; //focus on the new textbox
+					$scope.confirmPassword = true;
+					$scope.loading = false;
 					$scope.tempKey = requestObj.publicKey;
 				});
+				$('#confirm').focus();
 			} else {
 				$scope.sendEncrypted(requestObj.publicKey);
 			}
@@ -103,6 +119,7 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	$scope.socket.on('login', function (successBool) {
 		$scope.$apply(function () {
 			$scope.authing = false;
+			$scope.loading = false;
 			$scope.authed = successBool;
 			if (!$scope.authed) {
 				$scope.error = true;

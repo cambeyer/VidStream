@@ -10,31 +10,34 @@ directive('loginform', function() {
 				'<table style="background-color: #4558A7; color: white; padding: 30px; padding-left: 100px; padding-right: 100px; border-radius: 10px; border: 1px solid white" cellpadding="20" cellspacing="0" border="0" align="center">' +
 					'<tr>' +
 						'<td colspan="2">' +
-							'<h2>VidStream Login</h2><span ng-if="error" style="color: red"><br>Incorrect login credentials</span>' +
+							'<h2>VidStream Sign Up/Login</h2>' +
+							'<span ng-if="error" style="color: red"><br>Incorrect login credentials</span>' +
+							'<span ng-show="loading"><img src="loading.gif" style="max-width: 40px"></span>' +
 						'</td>' +
 					'</tr>' +
 					'<tr>' +
 						'<td>Username:</td>' +
 						'<td>' +
-							'<input class="loginctrl" type="text" ng-model="fields.username">' +
+							'<input id="username" class="loginctrl" type="text" ng-change="resetControls()" ng-model="fields.username" ng-trim="false" maxlength="20">' +
 						'</td>' +
 					'</tr>' +
 					'<tr>' +
 						'<td>Password:</td>' +
 						'<td>' +
-							'<input class="loginctrl" type="password" maxlength="128" ng-model="fields.password">' +
+							'<input id="password" class="loginctrl" type="password" maxlength="128" ng-model="fields.password">' +
 						'</td>' +
 					'</tr>' +
 					'<tr ng-if="confirmPassword">' +
 						'<td>Confirm:</td>' +
 						'<td>' +
-							'<input class="loginctrl" type="password" maxlength="128" ng-model="fields.passwordConfirm">' +
+							'<input id="confirm" class="loginctrl" type="password" maxlength="128" ng-model="fields.passwordConfirm">' +
 						'</td>' +
 					'</tr>' +
 					'</tr>' +
 					'<tr>' +
 						'<td colspan="2">' +
 							'<input class="mySubmit" type="submit" value="">' +
+
 						'</td>' +
 					'</tr>' +
 				'</table>' +
