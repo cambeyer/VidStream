@@ -10,9 +10,12 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	$scope.authed = false;
 	$scope.authing = false;
 
+	$scope.confirmPassword = false;
+
 	$scope.fields = {
 		username: "",
 		password: "",
+		passwordConfirm: ""
 	};
 
 	//initialize the Socket.IO environment
@@ -52,22 +55,50 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 	$scope.login = function() {
 		if ($scope.fields.username && $scope.fields.password) {
 			$scope.authing = true;
-			$scope.socket.emit('login', $scope.fields.username);
+			if ($scope.confirmPassword) {
+				if ($scope.fields.passwordConfirm == $scope.fields.password) {
+					alert("Welcome to VidStream; your account will now be created");
+					$scope.sendEncrypted($scope.tempKey);
+					$scope.$apply(function () {
+						$scope.confirmPassword = false;
+					});
+				} else {
+					alert("Your passwords do not match");
+					$scope.$apply(function () {
+						$scope.fields.password = "";
+						$scope.authing = false;
+					});
+				}
+			} else {
+				$scope.socket.emit('login', $scope.fields.username);
+			}
 		}
 	}
 
-	$scope.socket.on('encrypt', function (publicKey) {
+	$scope.socket.on('encrypt', function (requestObj) {
 		if ($scope.authing) {
-			var encryptor = new JSEncrypt();
-			encryptor.setPublicKey(publicKey);
-			var response = {};
-			response.username = $scope.fields.username;
-			response.message = encryptor.encrypt(CryptoJS.MD5($scope.fields.password).toString());
-			$scope.socket.emit('encrypt', response);
+			if (requestObj.newUser) {
+				alert("Please confirm your password to create your account.");
+				$scope.$apply(function () {
+					$scope.confirmPassword = true;
+					$scope.tempKey = requestObj.publicKey;
+				});
+			} else {
+				$scope.sendEncrypted(requestObj.publicKey);
+			}
 		} else {
 			//Hacking attempt detected
 		}
 	});
+
+	$scope.sendEncrypted = function(publicKey) {
+		var encryptor = new JSEncrypt();
+		encryptor.setPublicKey(publicKey);
+		var response = {};
+		response.username = $scope.fields.username;
+		response.message = encryptor.encrypt(CryptoJS.MD5($scope.fields.password).toString());
+		$scope.socket.emit('encrypt', response);
+	}
 
 	$scope.socket.on('login', function (successBool) {
 		$scope.$apply(function () {

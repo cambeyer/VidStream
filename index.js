@@ -171,7 +171,19 @@ io.on('connection', function(socket) {
 		var key = new NodeRSA({b: 1024});
 		key.setOptions({'encryptionScheme': 'pkcs1'});
 		userKeys[username].keyPair = key;
-		socket.emit('encrypt', key.exportKey('pkcs8-public-pem'));
+		var requestObj = {};
+		requestObj.publicKey = key.exportKey('pkcs8-public-pem');
+		db.users.findOne({ username: username }, function (err, user) {
+			if (!err) {
+				if (!user) {
+					//do we want to really tell the client if a user doesn't exist?
+					requestObj.newUser = true;
+				}
+				socket.emit('encrypt', requestObj);
+			} else {
+				console.log("DB lookup error");
+			}
+		});
 	});
 	socket.on('encrypt', function(encrypted) {
 		try {

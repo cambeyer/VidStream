@@ -22,7 +22,13 @@ directive('loginform', function() {
 					'<tr>' +
 						'<td>Password:</td>' +
 						'<td>' +
-							'<input class="loginctrl" type="password" ng-model="fields.password">' +
+							'<input class="loginctrl" type="password" maxlength="128" ng-model="fields.password">' +
+						'</td>' +
+					'</tr>' +
+					'<tr ng-if="confirmPassword">' +
+						'<td>Confirm:</td>' +
+						'<td>' +
+							'<input class="loginctrl" type="password" maxlength="128" ng-model="fields.passwordConfirm">' +
 						'</td>' +
 					'</tr>' +
 					'</tr>' +
