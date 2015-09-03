@@ -23,15 +23,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	//initialize the Socket.IO environment
 	$scope.socket = io();
 
-	$document.ready(function () {
+	$document.ready(function(){
 		$('#username').focus();
-		if ($cookies.get('username')) {
-			$scope.$apply(function() {
-				$scope.fields.username = $cookies.get('username');
-				$scope.hash = $cookies.get('hash');
-			});
-			$scope.login();
-		}
 	});
 
 	$scope.logout = function() {
@@ -84,11 +77,11 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			$scope.error = false;
 			if ($scope.confirmPassword) {
 				if ($scope.fields.passwordConfirm == $scope.fields.password) {
-					alert("Welcome to VidStream; your account will now be created");
+					alert("Welcome to VidStream; your account will now be created.");
 					$scope.sendEncrypted($scope.tempKey);
 					$scope.confirmPassword = false;
 				} else {
-					alert("Your passwords do not match");
+					alert("Your passwords do not match. Please try again.");
 					$scope.fields.password = "";
 					$scope.fields.passwordConfirm = "";
 					$scope.authing = false;
@@ -167,4 +160,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			}
 		});
 	});
+
+	//Perform after all of the functions have been defined
+
+	if ($cookies.get('username')) {
+		$scope.fields.username = $cookies.get('username');
+		$scope.hash = $cookies.get('hash');
+		$scope.login();
+	}
 });
