@@ -197,6 +197,7 @@ io.on('connection', function(socket) {
 							console.log("Successfully logged in user: " + user.username)
 							socket.emit('login', true);
 						} else {
+							console.log("Incorrect password for user: " + user.username);
 							socket.emit('login', false);
 						}
 					}
@@ -205,7 +206,8 @@ io.on('connection', function(socket) {
 				}
 			});
 		} catch (e) {
-			console.log("Decryption error");
+			//Hacking attempt detected
+			console.log("Decryption error. Hacking attempt?");
 			socket.emit('login', false);
 		}
 		if (userKeys[encrypted.username]) {

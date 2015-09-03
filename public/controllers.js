@@ -62,7 +62,7 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 			encryptor.setPublicKey(publicKey);
 			var response = {};
 			response.username = $scope.fields.username;
-			response.message = encryptor.encrypt($scope.fields.password);
+			response.message = encryptor.encrypt(CryptoJS.MD5($scope.fields.password).toString());
 			$scope.socket.emit('encrypt', response);
 		} else {
 			//Hacking attempt detected
