@@ -80,7 +80,7 @@ angular.module('VidStreamApp.controllers', []).controller('mainController', func
 			if (requestObj.newUser) {
 				alert("Please confirm your password to create your account.");
 				$scope.$apply(function () {
-					$scope.confirmPassword = true;
+					$scope.confirmPassword = true; //focus on the new textbox
 					$scope.tempKey = requestObj.publicKey;
 				});
 			} else {
