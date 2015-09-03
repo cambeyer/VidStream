@@ -6,6 +6,7 @@ var fs = require('fs-extra');
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var crypto = require('crypto');
+var NodeRSA = require('node-rsa');
 var ffmpeg = require('fluent-ffmpeg');
 /*
 //Code for AD
@@ -27,6 +28,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 var processing = {};
 var done = [];
+var userKeys = {};
 
 app.route('/upload').post(function (req, res, next) {
 	var hash = crypto.createHash('md5');
@@ -165,14 +167,22 @@ io.on('connection', function(socket) {
 		processing[md5] = socket;
 		socket.emit('progress', 0);
 	});
-	socket.on('login', function(userObj) {
-		if (userObj.username) {
-			socket.emit('encrypt', "-----BEGIN PUBLIC KEY----- MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDlOJu6TyygqxfWT7eLtGDwajtN FOb9I5XRb6khyfD1Yt3YiCgQWMNW649887VGJiGr/L5i2osbl8C9+WJTeucF+S76 xFxdU6jE0NQ+Z+zEdhUTooNRaY5nZiu5PgDB0ED/ZKBUSLKL7eibMxZtMlUDHjm4 gwQco1KRMDSmXSMkDwIDAQAB -----END PUBLIC KEY-----");
-		} else {
-			socket.emit('login', false);
-		}
+	socket.on('login', function(username) {
+		userKeys[username] = {};
+		var key = new NodeRSA({b: 1024});
+		key.setOptions({'encryptionScheme': 'pkcs1'});
+		userKeys[username].keyPair = key;
+		socket.emit('encrypt', key.exportKey('pkcs8-public-pem'));
 	});
 	socket.on('encrypt', function(encrypted) {
+		try {
+			var salt = "random";
+			var hashed = crypto.createHash('md5').update(userKeys[encrypted.username].keyPair.decrypt(encrypted.message, 'utf8') + salt).digest('hex');
+			//console.log("Hashed password for " + encrypted.username + ": " + hashed);
+			//hash the decrypted value and compare that with a database lookup
+		} catch (e) {
+			socket.emit('login', false);
+		}
 		socket.emit('login', true);
 	});
 });
