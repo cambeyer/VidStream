@@ -1,3 +1,4 @@
+/*global angular*/
 angular.module('VidStreamApp', ['VidStreamApp.controllers', 'VidStreamApp.directives', 'ngAnimate']);
 
 //main Angular module
@@ -21,6 +22,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	};
 
 	//initialize the Socket.IO environment
+	/*global io*/
 	$scope.socket = io();
 
 	$document.ready(function(){
@@ -31,7 +33,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$cookies.remove('username');
 		$cookies.remove('hash');
 		$window.location.reload();
-	}
+	};
 
 	$scope.uploadFile = function() {
 		var oData = new FormData();
@@ -68,7 +70,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$scope.confirmPassword = false;
 		$scope.fields.passwordConfirm = "";
 		$scope.fields.username = $scope.fields.username.replace(/\W/g, '');
-	}
+	};
 
 	$scope.login = function() {
 		if ($scope.fields.username && ($scope.fields.password || $scope.hash)) {
@@ -94,7 +96,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$scope.socket.emit('login', $scope.fields.username);
 			}
 		}
-	}
+	};
 
 	$scope.socket.on('encrypt', function (requestObj) {
 		if ($scope.authing) {
@@ -115,16 +117,18 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	});
 
 	$scope.sendEncrypted = function(publicKey) {
+		/*global JSEncrypt*/
 		var encryptor = new JSEncrypt();
 		encryptor.setPublicKey(publicKey);
 		var response = {};
 		response.username = $scope.fields.username;
 		if (!$scope.hash) {
+			/*global CryptoJS*/
 			$scope.hash = CryptoJS.MD5($scope.fields.password).toString();
 		}
 		response.message = encryptor.encrypt($scope.hash);
 		$scope.socket.emit('encrypt', response);
-	}
+	};
 
 	$scope.socket.on('login', function (successBool) {
 		$scope.$apply(function () {
@@ -138,9 +142,9 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			} else {
 				$scope.error = false;
 				$cookies.put('username', $scope.fields.username);
-				$cookies.put('hash', $scope.hash)
-				$scope.hash = "";
-				$scope.fields.password = ""; //blank this? token instead?
+				$cookies.put('hash', $scope.hash);
+				$scope.fields.password = "";
+				//token?
 				//load list of videos from the server
 			}
 		});

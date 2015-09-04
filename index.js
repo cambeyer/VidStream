@@ -23,7 +23,7 @@ var processing = {};
 var done = [];
 var userKeys = {};
 
-var db = {}
+var db = {};
 db.users = new Datastore({ filename: dir + "users.db", autoload: true });
 db.users.persistence.setAutocompactionInterval(200000);
 
@@ -79,7 +79,7 @@ app.route('/upload').post(function (req, res, next) {
 					fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
 				})
 				.on('error', function(err, stdout, stderr) {
-					console.log("Transcoding issue: " + stderr);
+					console.log("Transcoding issue: " + err + stderr);
 				})
 				.save(dir + md5 + ".mp4");
 		});
@@ -206,7 +206,7 @@ io.on('connection', function(socket) {
 						});
 					} else {
 						if (crypto.pbkdf2Sync(password, user.salt, 10000, 512).toString('hex') == user.hash) {
-							console.log("Successfully logged in user: " + user.username)
+							console.log("Successfully logged in user: " + user.username);
 							socket.emit('login', true);
 						} else {
 							console.log("Incorrect password for user: " + user.username);

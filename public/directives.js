@@ -1,4 +1,5 @@
 //all of the user-defined Angular directives
+/*global angular*/
 angular.module('VidStreamApp.directives', []).
 directive('loginform', function() {
 	return {
@@ -103,7 +104,7 @@ directive('dragAndDrop', function($rootScope) {
 					link.click();
 					document.body.removeChild(link);
 				}
-			}
+			};
 
 			//bind to the drop action
 			elem.bind('drop', function(e) {
@@ -213,7 +214,7 @@ directive('uploadForm', function($rootScope) {
 						$scope.revealTime = "";
 					}
 				});
-				oData = new FormData(this);
+				var oData = new FormData(this);
 				$scope.$apply(function () {
 					$scope.futureReveal = false;
 				});
