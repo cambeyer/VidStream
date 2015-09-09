@@ -9,14 +9,13 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.processPercent = 0;
 
 	$scope.authed = false;
-	$scope.authing = false;
 	$scope.loading = false;
 
 	$scope.confirmPassword = false;
-	$scope.hash = "";
 
 	/*global jsrp*/
 	$scope.srpClient = new jsrp.client();
+	$scope.srpObj = {};
 
 	$scope.fields = {
 		username: "",
@@ -30,11 +29,13 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$document.ready(function(){
 		$('#username').focus();
+		if ($scope.fields.username) {
+			$('#password').focus();
+		}
 	});
 
 	$scope.logout = function() {
 		$cookies.remove('username');
-		$cookies.remove('hash');
 		$window.location.reload();
 	};
 
@@ -77,82 +78,62 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.login = function() {
 		if ($scope.fields.username && $scope.fields.password) {
-			$scope.srpClient.init({ username: $scope.fields.username, password: CryptoJS.MD5($scope.fields.password).toString() }, function () {
-				var srpObj = {};
-				srpObj.username = $scope.fields.username;
-				srpObj.publicKey = $scope.srpClient.getPublicKey();
-				$scope.socket.emit('login', srpObj);
-			});
+			$scope.loading = true;
+			if (!$scope.confirmPassword) {
+				/*global CryptoJS*/
+				$scope.srpClient.init({ username: $scope.fields.username, password: CryptoJS.MD5($scope.fields.password).toString() }, function () {
+					$scope.srpObj = {};
+					$scope.srpObj.username = $scope.fields.username;
+					$scope.srpObj.publicKey = $scope.srpClient.getPublicKey();
+					$scope.socket.emit('login', $scope.srpObj);
+				});
+			} else {
+				if ($scope.fields.passwordConfirm == $scope.fields.password) {
+					$scope.srpClient.createVerifier(function(err, result) {
+						if (!err) {
+							$scope.srpObj.salt = result.salt;
+							$scope.srpObj.verifier = result.verifier;
+							$scope.socket.emit('new', $scope.srpObj);
+						} else {
+							console.log("Error creating verifier.");
+						}
+				    });
+				} else {
+					alert("Your passwords do not match.  Please try again.");
+					$scope.fields.passwordConfirm = "";
+					$scope.fields.password = "";
+					$("#password").focus();
+				}
+			}
 		}
 	};
 
 	$scope.socket.on('new', function() {
-		$scope.srpClient.createVerifier(function(err, result) {
-			if (!err) {
-				var userObj = {};
-				userObj.username = $scope.fields.username;
-				userObj.salt = result.salt;
-				userObj.verifier = result.verifier;
-				$scope.socket.emit('new', userObj);
-			} else {
-				console.log("Error creating verifier.")
-			}
-	    });
-	})
+		$scope.$apply(function () {
+			$scope.loading = false;
+			$scope.confirmPassword = true;
+		});
+		$('#confirm').focus();
+	});
 
-	$scope.socket.on('srp', function(srpResponse) {
+	$scope.socket.on('login', function(srpResponse) {
 		$scope.srpClient.setSalt(srpResponse.salt);
 		$scope.srpClient.setServerPublicKey(srpResponse.publicKey);
-		console.log($scope.srpClient.getSharedKey());
-	});
-
-	$scope.socket.on('encrypt', function (requestObj) {
-		if ($scope.authing) {
-			if (requestObj.newUser) {
-				//alert("Please confirm your password to create your account.");
-				$scope.$apply(function () {
-					$scope.confirmPassword = true;
-					$scope.loading = false;
-					$scope.tempKey = requestObj.publicKey;
-				});
-				$('#confirm').focus();
-			} else {
-				$scope.sendEncrypted(requestObj.publicKey);
-			}
-		} else {
-			//Hacking attempt detected
-		}
-	});
-
-	$scope.sendEncrypted = function(publicKey) {
-		/*global JSEncrypt*/
-		var encryptor = new JSEncrypt();
-		encryptor.setPublicKey(publicKey);
-		var response = {};
-		response.username = $scope.fields.username;
-		if (!$scope.hash) {
-			/*global CryptoJS*/
-			$scope.hash = CryptoJS.MD5($scope.fields.password).toString();
-		}
-		response.message = encryptor.encrypt($scope.hash);
-		$scope.socket.emit('encrypt', response);
-	};
-
-	$scope.socket.on('login', function (successBool) {
+		var challenge = {};
+		challenge.username = $scope.fields.username;
+		challenge.encryptedPhrase = CryptoJS.AES.encrypt('client', $scope.srpClient.getSharedKey()).toString();
+		$scope.socket.emit('verify', challenge);
+		var successBool = (CryptoJS.AES.decrypt(srpResponse.encryptedPhrase, $scope.srpClient.getSharedKey()).toString(CryptoJS.enc.Utf8) == "server");
 		$scope.$apply(function () {
-			$scope.authing = false;
 			$scope.loading = false;
 			$scope.authed = successBool;
 			if (!$scope.authed) {
 				$scope.error = true;
-				$scope.hash = "";
 				$scope.fields.password = "";
 			} else {
 				$scope.error = false;
 				$cookies.put('username', $scope.fields.username);
-				$cookies.put('hash', $scope.hash);
 				$scope.fields.password = "";
-				//token?
 				//load list of videos from the server
 			}
 		});
@@ -177,7 +158,5 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	if ($cookies.get('username')) {
 		$scope.fields.username = $cookies.get('username');
-		$scope.hash = $cookies.get('hash');
-		$scope.login();
 	}
 });

@@ -6,12 +6,10 @@ var fs = require('fs-extra');
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var crypto = require('crypto');
-var NodeRSA = require('node-rsa');
-var rand = require('csprng');
+var node_cryptojs = require('node-cryptojs-aes');
 var ffmpeg = require('fluent-ffmpeg');
 var Datastore = require('nedb');
 var jsrp = require('jsrp');
-var server = new jsrp.server();
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -24,6 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 var processing = {};
 var done = [];
 var userKeys = {};
+
+var CryptoJS = node_cryptojs.CryptoJS;
 
 var db = {};
 db.users = new Datastore({ filename: dir + "users.db", autoload: true });
@@ -155,16 +155,20 @@ app.get('/download', function(req, res){
 	}
 });
 
-var createSRPResponse = function(socket, user, publicKey) {
+var createSRPResponse = function(socket, user) {
 	var srpServer = new jsrp.server();
 	srpServer.init({ salt: user.salt, verifier: user.verifier }, function () {
-		srpServer.setClientPublicKey(publicKey);
+		srpServer.setClientPublicKey(user.publicKey);
 		var srpMsg = {};
 		srpMsg.salt = srpServer.getSalt();
 		srpMsg.publicKey = srpServer.getPublicKey();
-		socket.emit('srp', srpMsg);
+		srpMsg.encryptedPhrase = CryptoJS.AES.encrypt('server', srpServer.getSharedKey()).toString();
+		userKeys[user.username] = {};
+		userKeys[user.username].key = srpServer.getSharedKey();
+		userKeys[user.username].verified = false;
+		socket.emit('login', srpMsg);
 	});
-}
+};
 
 io.on('connection', function(socket) {
 	socket.on('subscribe', function(md5) {
@@ -187,8 +191,9 @@ io.on('connection', function(socket) {
 		userObj.verifier = newUser.verifier;
 		db.users.insert(userObj, function (err) {
 			if (!err) {
-				console.log("Registered new user: " + userObj.username);
-				createSRPResponse(socket, userObj, newUser.publicKey);
+				console.log("Registered new user: " + newUser.username);
+				userObj.publicKey = newUser.publicKey;
+				createSRPResponse(socket, userObj);
 			} else {
 				console.log("DB insert error");
 			}
@@ -198,72 +203,30 @@ io.on('connection', function(socket) {
 		db.users.findOne({ username: srpObj.username }, function (err, userObj) {
 			if (!err) {
 				if (!userObj) {
-					socket.emit('new', 'new');
+					socket.emit('new');
 				} else {
-					createSRPResponse(socket, userObj, srpObj.publicKey);
+					userObj.publicKey = srpObj.publicKey;
+					createSRPResponse(socket, userObj);
 				}
-			} else {
-				console.log("DB lookup error");
-			}
-		});
-
-		userKeys[username] = {};
-		var key = new NodeRSA({b: 1024});
-		key.setOptions({'encryptionScheme': 'pkcs1'});
-		userKeys[username].keyPair = key;
-		var requestObj = {};
-		requestObj.publicKey = key.exportKey('pkcs8-public-pem');
-		db.users.findOne({ username: username }, function (err, user) {
-			if (!err) {
-				if (!user) {
-					//do we want to really tell the client if a user doesn't exist?
-					requestObj.newUser = true;
-				}
-				socket.emit('encrypt', requestObj);
 			} else {
 				console.log("DB lookup error");
 			}
 		});
 	});
-	socket.on('encrypt', function(encrypted) {
-		try {
-			var password = userKeys[encrypted.username].keyPair.decrypt(encrypted.message, 'utf8');
-			db.users.findOne({ username: encrypted.username }, function (err, user) {
-				if (!err) {
-					if (!user) {
-						var userObj = {};
-						userObj.username = encrypted.username;
-						userObj.salt = rand(128, 36);
-						userObj.hash = crypto.pbkdf2Sync(password, userObj.salt, 10000, 512).toString('hex');
-						db.users.insert(userObj, function (err) {
-							if (!err) {
-								console.log("Registered new user: " + userObj.username);
-								socket.emit('login', true);
-							} else {
-								console.log("DB insert error");
-								socket.emit('login', false);
-							}
-						});
-					} else {
-						if (crypto.pbkdf2Sync(password, user.salt, 10000, 512).toString('hex') == user.hash) {
-							console.log("Successfully logged in user: " + user.username);
-							socket.emit('login', true);
-						} else {
-							console.log("Incorrect password for user: " + user.username);
-							socket.emit('login', false);
-						}
-					}
+	socket.on('verify', function(challenge) {
+		if (userKeys[challenge.username]) {
+			try {
+				if (CryptoJS.AES.decrypt(challenge.encryptedPhrase, userKeys[challenge.username].key).toString(CryptoJS.enc.Utf8) !== "client") {
+					delete userKeys[challenge.username];
+					console.log("Failed login for user: " + challenge.username);
 				} else {
-					console.log("DB lookup error");
+					console.log("Successfully logged in user: " + challenge.username);
+					userKeys[challenge.username].verified = true;
 				}
-			});
-		} catch (e) {
-			//Hacking attempt detected
-			console.log("Decryption error. Hacking attempt?");
-			socket.emit('login', false);
-		}
-		if (userKeys[encrypted.username]) {
-			delete userKeys[encrypted.username];
+			} catch (e) {
+				delete userKeys[challenge.username];
+				console.log("Failed login for user: " + challenge.username);
+			}
 		}
 	});
 });
