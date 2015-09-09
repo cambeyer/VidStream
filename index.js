@@ -10,6 +10,8 @@ var NodeRSA = require('node-rsa');
 var rand = require('csprng');
 var ffmpeg = require('fluent-ffmpeg');
 var Datastore = require('nedb');
+var jsrp = require('jsrp');
+var server = new jsrp.server();
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -153,6 +155,17 @@ app.get('/download', function(req, res){
 	}
 });
 
+var createSRPResponse = function(socket, user, publicKey) {
+	var srpServer = new jsrp.server();
+	srpServer.init({ salt: user.salt, verifier: user.verifier }, function () {
+		srpServer.setClientPublicKey(publicKey);
+		var srpMsg = {};
+		srpMsg.salt = srpServer.getSalt();
+		srpMsg.publicKey = srpServer.getPublicKey();
+		socket.emit('srp', srpMsg);
+	});
+}
+
 io.on('connection', function(socket) {
 	socket.on('subscribe', function(md5) {
 		console.log("Subscription from client for processing updates " + md5);
@@ -167,7 +180,33 @@ io.on('connection', function(socket) {
 		processing[md5] = socket;
 		socket.emit('progress', 0);
 	});
-	socket.on('login', function(username) {
+	socket.on('new', function(newUser) {
+		var userObj = {};
+		userObj.username = newUser.username;
+		userObj.salt = newUser.salt;
+		userObj.verifier = newUser.verifier;
+		db.users.insert(userObj, function (err) {
+			if (!err) {
+				console.log("Registered new user: " + userObj.username);
+				createSRPResponse(socket, userObj, newUser.publicKey);
+			} else {
+				console.log("DB insert error");
+			}
+		});
+	});
+	socket.on('login', function(srpObj) {
+		db.users.findOne({ username: srpObj.username }, function (err, userObj) {
+			if (!err) {
+				if (!userObj) {
+					socket.emit('new', 'new');
+				} else {
+					createSRPResponse(socket, userObj, srpObj.publicKey);
+				}
+			} else {
+				console.log("DB lookup error");
+			}
+		});
+
 		userKeys[username] = {};
 		var key = new NodeRSA({b: 1024});
 		key.setOptions({'encryptionScheme': 'pkcs1'});

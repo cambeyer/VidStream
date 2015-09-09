@@ -15,6 +15,9 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.confirmPassword = false;
 	$scope.hash = "";
 
+	/*global jsrp*/
+	$scope.srpClient = new jsrp.client();
+
 	$scope.fields = {
 		username: "",
 		password: "",
@@ -73,30 +76,35 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	};
 
 	$scope.login = function() {
-		if ($scope.fields.username && ($scope.fields.password || $scope.hash)) {
-			$scope.authing = true;
-			$scope.loading = true;
-			$scope.error = false;
-			if ($scope.confirmPassword) {
-				if ($scope.fields.passwordConfirm == $scope.fields.password) {
-					alert("Welcome to VidStream; your account will now be created.");
-					$scope.sendEncrypted($scope.tempKey);
-					$scope.confirmPassword = false;
-				} else {
-					alert("Your passwords do not match. Please try again.");
-					$scope.fields.password = "";
-					$scope.fields.passwordConfirm = "";
-					$scope.authing = false;
-					$scope.loading = false;
-					$timeout(function() {
-						$('#password').focus();
-					}, 0, false);
-				}
-			} else {
-				$scope.socket.emit('login', $scope.fields.username);
-			}
+		if ($scope.fields.username && $scope.fields.password) {
+			$scope.srpClient.init({ username: $scope.fields.username, password: CryptoJS.MD5($scope.fields.password).toString() }, function () {
+				var srpObj = {};
+				srpObj.username = $scope.fields.username;
+				srpObj.publicKey = $scope.srpClient.getPublicKey();
+				$scope.socket.emit('login', srpObj);
+			});
 		}
 	};
+
+	$scope.socket.on('new', function() {
+		$scope.srpClient.createVerifier(function(err, result) {
+			if (!err) {
+				var userObj = {};
+				userObj.username = $scope.fields.username;
+				userObj.salt = result.salt;
+				userObj.verifier = result.verifier;
+				$scope.socket.emit('new', userObj);
+			} else {
+				console.log("Error creating verifier.")
+			}
+	    });
+	})
+
+	$scope.socket.on('srp', function(srpResponse) {
+		$scope.srpClient.setSalt(srpResponse.salt);
+		$scope.srpClient.setServerPublicKey(srpResponse.publicKey);
+		console.log($scope.srpClient.getSharedKey());
+	});
 
 	$scope.socket.on('encrypt', function (requestObj) {
 		if ($scope.authing) {
