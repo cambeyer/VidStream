@@ -39,8 +39,8 @@
 			<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
 			<div ng-show="progress" style="width: 200px; height: 20px; margin: 20px"><progress-bar></progress-bar></div>
 			<div style="padding: 20px">
-				<video id="video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" width="640" height="360" data-setup="{}">
-					<source src="./download?file=fdcc2f8fbd921fc72cbf998adf0b5d9b.mp4" type='video/mp4'>
+				<video id="video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="none" width="640" height="360" data-setup="{}">
+					<source ng-if="authed" src="{{videoString('fdcc2f8fbd921fc72cbf998adf0b5d9b.mp4')}}" type='video/mp4'>
 				</video>
 			</div>
 		</div>

@@ -1,7 +1,7 @@
 //all of the user-defined Angular directives
 /*global angular*/
 angular.module('VidStreamApp.directives', []).
-directive('loginform', function() {
+directive('loginform', function () {
 	return {
 		scope: false,
 		replace: true,
@@ -45,14 +45,14 @@ directive('loginform', function() {
 		}
 	};
 }).
-directive('dragAndDrop', function($rootScope) {
+directive('dragAndDrop', function ($rootScope) {
 	//directive for dragging and dropping onto a container
 	return {
 		scope: false,
 		restrict: 'A',
-		link: function($scope, elem, attr) {
+		link: function ($scope, elem, attr) {
 			//bind to dragenter to apply green highlighting to folder titles
-			elem.bind('dragenter', function(e) {
+			elem.bind('dragenter', function (e) {
 				//don't let this event pass on to the default handlers
 				e.stopPropagation();
 				e.preventDefault();
@@ -61,7 +61,7 @@ directive('dragAndDrop', function($rootScope) {
 				}
 			});
 			//bind to dragleave to remove green highlighting on folder titles
-			elem.bind('dragleave', function(e) {
+			elem.bind('dragleave', function (e) {
 				//don't let this event pass on to the default handlers
 				e.stopPropagation();
 				e.preventDefault();
@@ -70,7 +70,7 @@ directive('dragAndDrop', function($rootScope) {
 				}
 			});
 			//bind to dragover to provide a secondary mechanism for applying green highlighting on folder titles
-			elem.bind('dragover', function(e) {
+			elem.bind('dragover', function (e) {
 				//don't let this event pass on to the default handlers
 				e.stopPropagation();
 				e.preventDefault();
@@ -107,7 +107,7 @@ directive('dragAndDrop', function($rootScope) {
 			};
 
 			//bind to the drop action
-			elem.bind('drop', function(e) {
+			elem.bind('drop', function (e) {
 				//don't let this event pass on to the default handlers
 				e.stopPropagation();
 				e.preventDefault();
@@ -162,7 +162,7 @@ directive('dragAndDrop', function($rootScope) {
 		}
 	};
 }).
-directive('uploadForm', function($rootScope) {
+directive('uploadForm', function ($rootScope) {
 	//directive that controls the upload form
 	return {
 		scope: false,
@@ -202,9 +202,9 @@ directive('uploadForm', function($rootScope) {
 					'</td>' +
 				'</tr>' +
 			'</table>',
-		link: function($scope, elem, attr) {
+		link: function ($scope, elem, attr) {
 			//when the form is submitted, take over that event
-			elem.bind('submit', function(e) {
+			elem.bind('submit', function (e) {
 				//$(elem).children('table').css('background-color', '#FF9999');
 				e.preventDefault();
 				$scope.$apply(function () {
@@ -234,7 +234,7 @@ directive('uploadForm', function($rootScope) {
 				//uploading to the /upload endpoint
 				var oReq = new XMLHttpRequest();
 				oReq.open("post", "upload", true);
-				oReq.onload = function(oEvent) {
+				oReq.onload = function (oEvent) {
 					if (oReq.status == 200) {
 						//$(elem).children('table').css('background-color', 'transparent');
 						$rootScope.$apply(function () {
@@ -259,7 +259,7 @@ directive('uploadForm', function($rootScope) {
 			});
 		}
 	};
-}).directive('progressBar', function($document) {
+}).directive('progressBar', function ($document) {
 	return {
 		scope: false,
 		restrict: 'E',

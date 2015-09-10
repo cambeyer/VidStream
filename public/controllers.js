@@ -2,7 +2,7 @@
 angular.module('VidStreamApp', ['VidStreamApp.controllers', 'VidStreamApp.directives', 'ngAnimate']);
 
 //main Angular module
-angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainController', function($scope, $rootScope, $interval, $timeout, $cookies, $document, $window) {
+angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainController', function ($scope, $rootScope, $interval, $timeout, $cookies, $document, $window) {
 
 	$scope.progress = false;
 	$scope.uploadPercent = 0;
@@ -18,6 +18,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.srpObj = {};
 
 	$scope.sessionNumber = 0;
+	$scope.encryptedPhrases = {};
 
 	$scope.fields = {
 		username: "",
@@ -29,30 +30,30 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	/*global io*/
 	$scope.socket = io();
 
-	$document.ready(function(){
+	$document.ready(function (){
 		$('#username').focus();
 		if ($scope.fields.username) {
 			$('#password').focus();
 		}
 	});
 
-	$scope.logout = function() {
+	$scope.logout = function () {
 		$cookies.remove('username');
 		$window.location.reload();
 	};
 
-	$scope.uploadFile = function() {
+	$scope.uploadFile = function () {
 		var oData = new FormData();
 		oData.append("file", document.getElementById("file").files[0]);
 		var oReq = new XMLHttpRequest();
-		oReq.upload.addEventListener('progress', function(e) {
+		oReq.upload.addEventListener('progress', function (e) {
 			$scope.$apply(function () {
 				$scope.uploadPercent = Math.floor(e.loaded / e.total * 100).toFixed(0);
 			});
 		}, false);
 		oReq.open("post", "upload", true);
 		oReq.responseType = "text";
-		oReq.onreadystatechange = function() {
+		oReq.onreadystatechange = function () {
 			if (oReq.readyState == 4 && oReq.status == 200) {
 				$scope.socket.emit('subscribe', oReq.response);
 				$scope.$apply(function () {
@@ -68,17 +69,31 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		oReq.send(oData);
 	}
 
-	$scope.socket.on('reconnect', function(num) {
+	$scope.socket.on('reconnect', function (num) {
 		$scope.login();
 	});
 
-	$scope.resetControls = function() {
+	$scope.resetControls = function () {
 		$scope.confirmPassword = false;
 		$scope.fields.passwordConfirm = "";
 		$scope.fields.username = $scope.fields.username.replace(/\W/g, '');
 	};
 
-	$scope.login = function() {
+	$scope.encrypt = function (text) {
+		if (!$scope.encryptedPhrases[text]) {
+			$scope.encryptedPhrases[text] = CryptoJS.AES.encrypt(text, $scope.srpClient.getSharedKey()).toString();
+		}
+		return $scope.encryptedPhrases[text];
+	};
+
+	$scope.videoString = function (videoFile) {
+		if ($scope.fields.username && $scope.sessionNumber) {
+			/*global btoa*/
+			return "./download?" + "username=" + $scope.fields.username + "&session=" + $scope.sessionNumber + "&file=" + btoa($scope.encrypt(videoFile));
+		}
+	};
+
+	$scope.login = function () {
 		if ($scope.fields.username && $scope.fields.password) {
 			$scope.loading = true;
 			if (!$scope.confirmPassword) {
@@ -91,7 +106,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				});
 			} else {
 				if ($scope.fields.passwordConfirm == $scope.fields.password) {
-					$scope.srpClient.createVerifier(function(err, result) {
+					$scope.srpClient.createVerifier(function (err, result) {
 						if (!err) {
 							$scope.srpObj.salt = result.salt;
 							$scope.srpObj.verifier = result.verifier;
@@ -110,7 +125,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		}
 	};
 
-	$scope.socket.on('new', function() {
+	$scope.socket.on('new', function () {
 		$scope.$apply(function () {
 			$scope.loading = false;
 			$scope.confirmPassword = true;
@@ -118,14 +133,14 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$('#confirm').focus();
 	});
 
-	$scope.socket.on('login', function(srpResponse) {
+	$scope.socket.on('login', function (srpResponse) {
 		$scope.srpClient.setSalt(srpResponse.salt);
 		$scope.srpClient.setServerPublicKey(srpResponse.publicKey);
 		try {
 			$scope.sessionNumber = CryptoJS.AES.decrypt(srpResponse.encryptedPhrase, $scope.srpClient.getSharedKey()).toString(CryptoJS.enc.Utf8);
 		} catch (e) { }
 		var successBool = (!isNaN($scope.sessionNumber) && $scope.sessionNumber > 0);
-		console.log("Successfully established session: " + $scope.sessionNumber);
+		//console.log("Successfully established session: " + $scope.sessionNumber);
 		$scope.$apply(function () {
 			$scope.loading = false;
 			$scope.authed = successBool;
@@ -140,7 +155,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				var challenge = {};
 				challenge.username = $scope.fields.username;
 				challenge.sessionNumber = $scope.sessionNumber;
-				challenge.encryptedPhrase = CryptoJS.AES.encrypt('client', $scope.srpClient.getSharedKey()).toString();
+				challenge.encryptedPhrase = $scope.encrypt('client');
 				$scope.socket.emit('verify', challenge);
 				//load list of videos from the server
 			}

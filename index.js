@@ -10,6 +10,7 @@ var node_cryptojs = require('node-cryptojs-aes');
 var ffmpeg = require('fluent-ffmpeg');
 var Datastore = require('nedb');
 var jsrp = require('jsrp');
+var atob = require('atob')
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -39,7 +40,7 @@ app.route('/upload').post(function (req, res, next) {
 		console.log("Uploading file: " + name);
 		var filename = dir + path.basename(name);
 		var fstream = fs.createWriteStream(filename);
-		stream.on('data', function(chunk) {
+		stream.on('data', function (chunk) {
 			hash.update(chunk);
 		});
 		fstream.on('close', function () {
@@ -59,10 +60,10 @@ app.route('/upload').post(function (req, res, next) {
 				.outputOption('-movflags faststart')
 				.outputOption('-analyzeduration 2147483647')
 				.outputOption('-probesize 2147483647')
-				.on('start', function(cmdline) {
+				.on('start', function (cmdline) {
 					console.log("File uploaded; beginning transcode");
 				})
-				.on('progress', function(progress) {
+				.on('progress', function (progress) {
 					if (processing[md5]) {
 						processing[md5].emit('progress', progress.percent);
 					} else if (progress.percent > 50) {
@@ -70,7 +71,7 @@ app.route('/upload').post(function (req, res, next) {
 					}
 					//console.log('Transcoding: ' + progress.percent + '% done');
 				})
-				.on('end', function() {
+				.on('end', function () {
 					if (processing[md5]) {
 						processing[md5].emit('progress', 100);
 						delete processing[md5];
@@ -81,7 +82,7 @@ app.route('/upload').post(function (req, res, next) {
 					}
 					fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
 				})
-				.on('error', function(err, stdout, stderr) {
+				.on('error', function (err, stdout, stderr) {
 					console.log("Transcoding issue: " + err + stderr);
 				})
 				.save(dir + md5 + ".mp4");
@@ -94,68 +95,71 @@ app.route('/upload').post(function (req, res, next) {
 	req.pipe(req.busboy);
 });
 
-app.get('/download', function(req, res){
-	var file = path.resolve(dir, req.query.file);
-	if (req.headers.range) {
-		var range = req.headers.range;
-		var positions = range.replace(/bytes=/, "").split("-");
-		var start = parseInt(positions[0], 10);
+app.get('/download', function (req, res){
+	var filename = decrypt(req.query.username, req.query.session, atob(req.query.file));
+	if (filename) {
+		var file = path.resolve(dir, filename);
+		if (req.headers.range) {
+			var range = req.headers.range;
+			var positions = range.replace(/bytes=/, "").split("-");
+			var start = parseInt(positions[0], 10);
 
-		fs.stat(file, function(err, stats) {
-			if (err) {
-				return;
-			}
-			var total = stats.size;
-			console.log("Request for partial file: " + req.query.file + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
-			var end = positions[1] ? parseInt(positions[1], 10) : total - 1;
-			var chunksize = (end - start) + 1;
-
-			res.writeHead(206, {
-				"Content-Range": "bytes " + start + "-" + end + "/" + total,
-				"Accept-Ranges": "bytes",
-				"Content-Length": chunksize,
-				"Content-Type": "video/mp4"
-			});
-
-			var stream = fs.createReadStream(file, { start: start, end: end })
-			.on("open", function() {
-				stream.pipe(res);
-			}).on("error", function(err) {
-				try {
-					res.end(err);
-				} catch (e) {
-					console.log("Error streaming out.");
+			fs.stat(file, function (err, stats) {
+				if (err) {
+					return;
 				}
-			});
-		});
-	} else {
-		fs.stat(file, function(err, stats) {
-			if (err) {
-				return;
-			}
-			var total = stats.size;
-			console.log("Request for whole file: " + req.query.file + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
+				var total = stats.size;
+				console.log("Request for partial file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
+				var end = positions[1] ? parseInt(positions[1], 10) : total - 1;
+				var chunksize = (end - start) + 1;
 
-			res.writeHead(200, {
-				'Content-Length': total,
-				"Accept-Ranges": "bytes",
-				'Content-Type': 'video/mp4'
+				res.writeHead(206, {
+					"Content-Range": "bytes " + start + "-" + end + "/" + total,
+					"Accept-Ranges": "bytes",
+					"Content-Length": chunksize,
+					"Content-Type": "video/mp4"
+				});
+
+				var stream = fs.createReadStream(file, { start: start, end: end })
+				.on("open", function () {
+					stream.pipe(res);
+				}).on("error", function (err) {
+					try {
+						res.end(err);
+					} catch (e) {
+						console.log("Error streaming out.");
+					}
+				});
 			});
-			var stream = fs.createReadStream(file)
-			.on("open", function() {
-				stream.pipe(res);
-			}).on("error", function(err) {
-				try {
-					res.end(err);
-				} catch (e) {
-					console.log("Error streaming out.");
+		} else {
+			fs.stat(file, function (err, stats) {
+				if (err) {
+					return;
 				}
+				var total = stats.size;
+				console.log("Request for whole file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
+
+				res.writeHead(200, {
+					'Content-Length': total,
+					"Accept-Ranges": "bytes",
+					'Content-Type': 'video/mp4'
+				});
+				var stream = fs.createReadStream(file)
+				.on("open", function () {
+					stream.pipe(res);
+				}).on("error", function (err) {
+					try {
+						res.end(err);
+					} catch (e) {
+						console.log("Error streaming out.");
+					}
+				});
 			});
-		});
+		}
 	}
 });
 
-var createSRPResponse = function(socket, user) {
+var createSRPResponse = function (socket, user) {
 	var srpServer = new jsrp.server();
 	srpServer.init({ salt: user.salt, verifier: user.verifier }, function () {
 		srpServer.setClientPublicKey(user.publicKey);
@@ -176,7 +180,7 @@ var createSRPResponse = function(socket, user) {
 	});
 };
 
-var getKey = function(username, sessionNumber) {
+var getKey = function (username, sessionNumber) {
 	var key;
 	for (var i = 0; i < userKeys[username].keys.length; i++) {
 		if (userKeys[username].keys[i].sessionNumber < Date.now() - 86400000) { //24 hour timeout
@@ -191,7 +195,7 @@ var getKey = function(username, sessionNumber) {
 	return key;
 };
 
-var decrypt = function(username, sessionNumber, text) {
+var decrypt = function (username, sessionNumber, text) {
 	var key = getKey(username, sessionNumber);
 	if (key) {
 		try {
@@ -200,8 +204,8 @@ var decrypt = function(username, sessionNumber, text) {
 	}
 };
 
-io.on('connection', function(socket) {
-	socket.on('subscribe', function(md5) {
+io.on('connection', function (socket) {
+	socket.on('subscribe', function (md5) {
 		console.log("Subscription from client for processing updates " + md5);
 		for (var i = 0; i < done.length; i++) {
 			if (done[i] == md5) {
@@ -214,7 +218,7 @@ io.on('connection', function(socket) {
 		processing[md5] = socket;
 		socket.emit('progress', 0);
 	});
-	socket.on('new', function(newUser) {
+	socket.on('new', function (newUser) {
 		var userObj = {};
 		userObj.username = newUser.username;
 		userObj.salt = newUser.salt;
@@ -229,7 +233,7 @@ io.on('connection', function(socket) {
 			}
 		});
 	});
-	socket.on('login', function(srpObj) {
+	socket.on('login', function (srpObj) {
 		db.users.findOne({ username: srpObj.username }, function (err, userObj) {
 			if (!err) {
 				if (!userObj) {
@@ -243,7 +247,7 @@ io.on('connection', function(socket) {
 			}
 		});
 	});
-	socket.on('verify', function(challenge) {
+	socket.on('verify', function (challenge) {
 		if (userKeys[challenge.username]) {
 			if (decrypt(challenge.username, challenge.sessionNumber, challenge.encryptedPhrase) == "client") {
 				console.log("Successfully logged in user: " + challenge.username);
@@ -255,6 +259,6 @@ io.on('connection', function(socket) {
 	});
 });
 
-http.listen(8888, "0.0.0.0", function(){
+http.listen(8888, "0.0.0.0", function (){
 	console.log('listening on *:8888');
 });
