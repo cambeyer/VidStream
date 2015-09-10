@@ -197,11 +197,13 @@ var getKey = function (username, sessionNumber) {
 	return key;
 };
 
-var decrypt = function (username, sessionNumber, text) {
+var decrypt = function (username, sessionNumber, text, disregardVerification) {
 	var key = getKey(username, sessionNumber);
 	if (key) {
 		try {
-			return CryptoJS.AES.decrypt(text, key.content).toString(CryptoJS.enc.Utf8);
+			if (disregardVerification || key.verified) {
+				return CryptoJS.AES.decrypt(text, key.content).toString(CryptoJS.enc.Utf8);
+			}
 		} catch (e) { }
 	}
 };
@@ -251,7 +253,7 @@ io.on('connection', function (socket) {
 	});
 	socket.on('verify', function (challenge) {
 		if (userKeys[challenge.username]) {
-			if (decrypt(challenge.username, challenge.sessionNumber, challenge.encryptedPhrase) == "client") {
+			if (decrypt(challenge.username, challenge.sessionNumber, challenge.encryptedPhrase, true) == "client") {
 				console.log("Successfully logged in user: " + challenge.username);
 				getKey(challenge.username, challenge.sessionNumber).verified = true;
 			} else {

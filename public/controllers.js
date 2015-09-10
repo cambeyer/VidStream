@@ -62,12 +62,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			} else if (oReq.readyState == 4 && oReq.status !== 200) {
 				alert("There was an error uploading your file");
 			}
-		}
+		};
 		$("#file").prop('disabled', true);
 		$("#upload").prop('disabled', true);
 		$scope.progress = true;
 		oReq.send(oData);
-	}
+	};
 
 	$scope.socket.on('reconnect', function (num) {
 		$scope.login();
