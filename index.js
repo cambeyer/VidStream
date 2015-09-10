@@ -156,6 +156,8 @@ app.get('/download', function (req, res){
 				});
 			});
 		}
+	} else {
+		res.send(401, 'Not a valid user or session.');
 	}
 });
 
