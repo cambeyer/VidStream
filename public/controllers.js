@@ -17,6 +17,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.srpClient = new jsrp.client();
 	$scope.srpObj = {};
 
+	$scope.sessionNumber = 0;
+
 	$scope.fields = {
 		username: "",
 		password: "",
@@ -119,11 +121,11 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.socket.on('login', function(srpResponse) {
 		$scope.srpClient.setSalt(srpResponse.salt);
 		$scope.srpClient.setServerPublicKey(srpResponse.publicKey);
-		var challenge = {};
-		challenge.username = $scope.fields.username;
-		challenge.encryptedPhrase = CryptoJS.AES.encrypt('client', $scope.srpClient.getSharedKey()).toString();
-		$scope.socket.emit('verify', challenge);
-		var successBool = (CryptoJS.AES.decrypt(srpResponse.encryptedPhrase, $scope.srpClient.getSharedKey()).toString(CryptoJS.enc.Utf8) == "server");
+		try {
+			$scope.sessionNumber = CryptoJS.AES.decrypt(srpResponse.encryptedPhrase, $scope.srpClient.getSharedKey()).toString(CryptoJS.enc.Utf8);
+		} catch (e) { }
+		var successBool = (!isNaN($scope.sessionNumber) && $scope.sessionNumber > 0);
+		console.log("Successfully established session: " + $scope.sessionNumber);
 		$scope.$apply(function () {
 			$scope.loading = false;
 			$scope.authed = successBool;
@@ -134,6 +136,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$scope.error = false;
 				$cookies.put('username', $scope.fields.username);
 				$scope.fields.password = "";
+
+				var challenge = {};
+				challenge.username = $scope.fields.username;
+				challenge.sessionNumber = $scope.sessionNumber;
+				challenge.encryptedPhrase = CryptoJS.AES.encrypt('client', $scope.srpClient.getSharedKey()).toString();
+				$scope.socket.emit('verify', challenge);
 				//load list of videos from the server
 			}
 		});

@@ -162,10 +162,16 @@ var createSRPResponse = function(socket, user) {
 		var srpMsg = {};
 		srpMsg.salt = srpServer.getSalt();
 		srpMsg.publicKey = srpServer.getPublicKey();
-		srpMsg.encryptedPhrase = CryptoJS.AES.encrypt('server', srpServer.getSharedKey()).toString();
-		userKeys[user.username] = {};
-		userKeys[user.username].key = srpServer.getSharedKey();
-		userKeys[user.username].verified = false;
+		var sessionNumber = Date.now().toString();
+		if (!userKeys[user.username]) {
+			userKeys[user.username] = {keys: []};
+		}
+		srpMsg.encryptedPhrase = CryptoJS.AES.encrypt(sessionNumber, srpServer.getSharedKey()).toString();
+		var key = {};
+		key.content = srpServer.getSharedKey();
+		key.sessionNumber = sessionNumber;
+		key.verified = false;
+		userKeys[user.username].keys.push(key);
 		socket.emit('login', srpMsg);
 	});
 };
@@ -216,15 +222,24 @@ io.on('connection', function(socket) {
 	socket.on('verify', function(challenge) {
 		if (userKeys[challenge.username]) {
 			try {
-				if (CryptoJS.AES.decrypt(challenge.encryptedPhrase, userKeys[challenge.username].key).toString(CryptoJS.enc.Utf8) !== "client") {
-					delete userKeys[challenge.username];
+				var key;
+				for (var i = 0; i < userKeys[challenge.username].keys.length; i++) {
+					if (userKeys[challenge.username].keys[i].sessionNumber < Date.now() - 86400000) { //24 hour timeout
+						userKeys[challenge.username].keys.splice(i, 1);
+						i--;
+						continue;
+					}
+					if (!key && userKeys[challenge.username].keys[i].sessionNumber == challenge.sessionNumber) {
+						key = userKeys[challenge.username].keys[i];
+					}
+				}
+				if (!key || CryptoJS.AES.decrypt(challenge.encryptedPhrase, key.content).toString(CryptoJS.enc.Utf8) !== "client") {
 					console.log("Failed login for user: " + challenge.username);
 				} else {
 					console.log("Successfully logged in user: " + challenge.username);
-					userKeys[challenge.username].verified = true;
+					key.verified = true;
 				}
 			} catch (e) {
-				delete userKeys[challenge.username];
 				console.log("Failed login for user: " + challenge.username);
 			}
 		}
