@@ -176,6 +176,30 @@ var createSRPResponse = function(socket, user) {
 	});
 };
 
+var getKey = function(username, sessionNumber) {
+	var key;
+	for (var i = 0; i < userKeys[username].keys.length; i++) {
+		if (userKeys[username].keys[i].sessionNumber < Date.now() - 86400000) { //24 hour timeout
+			userKeys[username].keys.splice(i, 1);
+			i--;
+			continue;
+		}
+		if (!key && userKeys[username].keys[i].sessionNumber == sessionNumber) {
+			key = userKeys[username].keys[i];
+		}
+	}
+	return key;
+};
+
+var decrypt = function(username, sessionNumber, text) {
+	var key = getKey(username, sessionNumber);
+	if (key) {
+		try {
+			return CryptoJS.AES.decrypt(text, key.content).toString(CryptoJS.enc.Utf8);
+		} catch (e) { }
+	}
+};
+
 io.on('connection', function(socket) {
 	socket.on('subscribe', function(md5) {
 		console.log("Subscription from client for processing updates " + md5);
@@ -221,25 +245,10 @@ io.on('connection', function(socket) {
 	});
 	socket.on('verify', function(challenge) {
 		if (userKeys[challenge.username]) {
-			try {
-				var key;
-				for (var i = 0; i < userKeys[challenge.username].keys.length; i++) {
-					if (userKeys[challenge.username].keys[i].sessionNumber < Date.now() - 86400000) { //24 hour timeout
-						userKeys[challenge.username].keys.splice(i, 1);
-						i--;
-						continue;
-					}
-					if (!key && userKeys[challenge.username].keys[i].sessionNumber == challenge.sessionNumber) {
-						key = userKeys[challenge.username].keys[i];
-					}
-				}
-				if (!key || CryptoJS.AES.decrypt(challenge.encryptedPhrase, key.content).toString(CryptoJS.enc.Utf8) !== "client") {
-					console.log("Failed login for user: " + challenge.username);
-				} else {
-					console.log("Successfully logged in user: " + challenge.username);
-					key.verified = true;
-				}
-			} catch (e) {
+			if (decrypt(challenge.username, challenge.sessionNumber, challenge.encryptedPhrase) == "client") {
+				console.log("Successfully logged in user: " + challenge.username);
+				getKey(challenge.username, challenge.sessionNumber).verified = true;
+			} else {
 				console.log("Failed login for user: " + challenge.username);
 			}
 		}
