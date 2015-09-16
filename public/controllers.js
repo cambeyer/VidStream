@@ -150,7 +150,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			} else {
 				$scope.error = false;
 				$cookies.put('username', $scope.fields.username);
-				$scope.fields.password = "";
+				//$scope.fields.password = "";
 
 				var challenge = {};
 				challenge.username = $scope.fields.username;

@@ -10,7 +10,7 @@ var node_cryptojs = require('node-cryptojs-aes');
 var ffmpeg = require('fluent-ffmpeg');
 var Datastore = require('nedb');
 var jsrp = require('jsrp');
-var atob = require('atob')
+var atob = require('atob');
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -24,14 +24,14 @@ var processing = {};
 var done = [];
 var userKeys = {};
 
+var playing = {};
+
 var CryptoJS = node_cryptojs.CryptoJS;
 
 var db = {};
 db.users = new Datastore({ filename: dir + "users.db", autoload: true });
 db.users.persistence.setAutocompactionInterval(200000);
 db.users.ensureIndex({ fieldName: 'username', unique: true });
-
-//var userDB = { yes: { salt: 'fqvw8eglcw12dkqo43fq6qd81', hash: '7f05c6fa7f0c72fe9b8f33ddd23fbe74d54d92e4cefc6aceea2941fb0dee37ebc962d1d9ca23f2b5867c9887242c9ef2fa813614e67b9864f37b4c87876675ce65cde948175238df90b4ed368fbe3187edfc6cc8ccd1c10bfaa2eee0066da8ce90d2e500255e3e110a10ae92a6656634711bf54cc62e67e807ae7ca0afdd9cae54f4c5139da2d06cdd77e11e10eb15092172677e5c1267dd7fd96c976f472a3f728b460f70fb236877c1ca0e3bfaebd521ee3e43c97e1639040c423237bd6ef50545eb1f1f73f86eeb6fc167f291406bda6a314e80eeabfc5975c13067a17c1ecc17cbc922046c74299f676804301b06f674e0d858b06533bc4429b4999d6c42c5f62899949e5162913cf1b319aa8bf35729b973606c048cf0ecde7eb81976172fa056dff09fbecbee4bf6cc3a12b4875486b3e7982a1265d6c0a3397136948976736e382629b4c4af802d9b0c6879236930bbc7d49ddac328a9ce99e7911bdb3db9cbb03f98e4bf4968f7f757da5510b0529a127ab48e256c4121f7ecbb0b4da2a0fdd3c6c116e0760429d097b307275ccc8884e7bc15e29724be876bd4545a0856eae71dce2272a2615e955b0a3b5afba36f20738815fa0bdd67514b09e34d3da25d69bcd20321e4077fc055690a1d012ac53c18c071b20a06a02c36c27ce1e17fc2c76862dad6716d5beed7af9f466cdf897931fb5af69fa2a9cec027fe5d' }};
 
 app.route('/upload').post(function (req, res, next) {
 	var hash = crypto.createHash('md5');
@@ -96,13 +96,23 @@ app.route('/upload').post(function (req, res, next) {
 });
 
 app.get('/download', function (req, res){
-	var filename = decrypt(req.query.username, req.query.session, atob(req.query.file));
+	var encryptedName = atob(req.query.file);
+	var filename = decrypt(req.query.username, req.query.session, encryptedName);
 	if (filename) {
+
+		if (!playing[encryptedName]) {
+			playing[encryptedName] = {};
+			playing[encryptedName]["ranges"] = [];
+		}
+
+		var ranges = playing[encryptedName].ranges;
+
 		var file = path.resolve(dir, filename);
 		if (req.headers.range) {
 			var range = req.headers.range;
 			var positions = range.replace(/bytes=/, "").split("-");
 			var start = parseInt(positions[0], 10);
+			var current = start;
 
 			fs.stat(file, function (err, stats) {
 				if (err) {
@@ -111,17 +121,82 @@ app.get('/download', function (req, res){
 				var total = stats.size;
 				console.log("Request for partial file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
 				var end = positions[1] ? parseInt(positions[1], 10) : total - 1;
+				end = end - start > 900000 ? start + 900000 : end; /////////
+
+				var activeRange;
+				for (var i = 0; i < ranges.length; i++) {
+					if (start >= ranges[i].start && start < ranges[i].end) {
+						/*
+						start = ranges[i].end;
+						current = start;
+						if (end <= ranges[i].end) {
+							console.log("Sending 304");
+							res.setHeader("ETag", filename);
+							res.setHeader("Cache-Control", "private, max-age=432000000");
+							res.setHeader("Content-Range", "bytes " + start + "-" + end + "/" + total);
+							res.sendStatus(304);
+							return;
+							end = start + 900000;
+						}
+						*/
+						activeRange = ranges[i];
+						break;
+					}
+				}
+
 				var chunksize = (end - start) + 1;
 
 				res.writeHead(206, {
 					"Content-Range": "bytes " + start + "-" + end + "/" + total,
 					"Accept-Ranges": "bytes",
 					"Content-Length": chunksize,
-					"Content-Type": "video/mp4"
+					"Content-Type": "video/mp4",
+					"Cache-Control": "private, max-age=432000000",
+					"Last-Modified": stats.mtime,
+					"ETag": filename
 				});
 
 				var stream = fs.createReadStream(file, { start: start, end: end })
-				.on("open", function () {
+				.on("data", function (chunk) {
+					current = current + chunk.length;
+
+					if (!activeRange) {
+						var tempRange = {};
+						tempRange.start = start;
+						tempRange.end = current;
+						var pushed = false;
+						for (var i = 0; i < ranges.length; i++) {
+							if (start < ranges[i].start) {
+								ranges.splice(i, 0, tempRange);
+								activeRange = ranges[i];
+								pushed = true;
+								break;
+							}
+						}
+						if (!pushed) {
+							ranges.push(tempRange);
+							activeRange = ranges[ranges.length - 1];
+						}
+					} else {
+						if (current > activeRange.end) {
+							activeRange.end = current;
+						} else {
+							console.log("Duplicate request.");
+						}
+					}
+					for (var i = 0; i < ranges.length - 1; i++) {
+						if (ranges[i].end >= ranges[i + 1].start) {
+							ranges[i].end = ranges[i + 1].end;
+							ranges.splice(i + 1, 1);
+							if (start >= ranges[i].start && start < ranges[i].end) {
+								activeRange = ranges[i];
+								break;
+							}
+							i--;
+						}
+					}
+					console.log(JSON.stringify(ranges));
+				}).on("open", function () {
 					stream.pipe(res);
 				}).on("error", function (err) {
 					try {
