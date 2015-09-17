@@ -104,17 +104,21 @@ app.get('/download', function (req, res){
 	var verifier = req.cookies.etag ? parseInt(decrypt(req.query.username, req.query.session, atob(req.cookies.etag)), 10): 0;
 	if (filename) {
 
+		if (!req.headers.range && playing[encryptedName] && playing[encryptedName].verifier > -1) {
+			res.sendStatus(401);
+			return;
+		}
+
 		if (!playing[encryptedName]) {
 			playing[encryptedName] = {};
-			playing[encryptedName].verifier = 0;
+			playing[encryptedName].verifier = -1;
 		}
 		if (verifier > playing[encryptedName].verifier) {
 			playing[encryptedName].verifier = verifier;
 		} else {
 			//console.log("Incorrect verifier " + verifier + " " + parseInt(playing[encryptedName].verifier));
-			if (verifier !== 0 && playing[encryptedName].verifier == 0) {
+			if (verifier !== 0 && playing[encryptedName].verifier == -1) {
 				var etag = btoa(encrypt(req.query.username, req.query.session, "0"));
-				console.log(etag);
 				res.setHeader("Set-Cookie", "etag=" + etag);
 				res.setHeader("Location", req.originalUrl);
 				res.sendStatus(307);
@@ -144,8 +148,7 @@ app.get('/download', function (req, res){
 					"Content-Range": "bytes " + start + "-" + end + "/" + total,
 					"Accept-Ranges": "bytes",
 					"Content-Length": chunksize,
-					"Content-Type": "video/mp4",
-					"Set-Cookie": "etag=" + btoa(encrypt(req.query.username, req.query.session, playing[encryptedName].verifier.toString()))
+					"Content-Type": "video/mp4"
 				});
 
 				var stream = fs.createReadStream(file, { start: start, end: end })
@@ -171,7 +174,6 @@ app.get('/download', function (req, res){
 					'Content-Length': total,
 					"Accept-Ranges": "bytes",
 					'Content-Type': 'video/mp4',
-					"Set-Cookie": "etag=" + btoa(encrypt(req.query.username, req.query.session, playing[encryptedName].verifier.toString()))
 				});
 				var stream = fs.createReadStream(file)
 				.on("open", function () {

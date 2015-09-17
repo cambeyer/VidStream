@@ -99,8 +99,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		for (var i = 0; i < ranges.length; i++) {
 			totalTime = totalTime + (ranges.end(i) - ranges.start(i));
 		}
-		console.log("Updating progress");
-		document.cookie('etag=' + btoa($scope.encrypt((Math.floor(totalTime) + Date.now()).toString())));
+		console.log("Updating progress " + Date.now());
+		$cookies.put('etag', btoa($scope.encrypt((Math.floor(totalTime) + Date.now()).toString())));
 	});
 
 	$scope.login = function () {
