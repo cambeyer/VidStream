@@ -11,6 +11,7 @@ var ffmpeg = require('fluent-ffmpeg');
 var Datastore = require('nedb');
 var jsrp = require('jsrp');
 var atob = require('atob');
+var btoa = require('btoa');
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -98,21 +99,28 @@ app.route('/upload').post(function (req, res, next) {
 app.get('/download', function (req, res){
 	var encryptedName = atob(req.query.file);
 	var filename = decrypt(req.query.username, req.query.session, encryptedName);
+	var verifier = req.query.verifier ? parseInt(decrypt(req.query.username, req.query.session, atob(req.query.verifier))): 0;
 	if (filename) {
 
 		if (!playing[encryptedName]) {
 			playing[encryptedName] = {};
-			playing[encryptedName]["ranges"] = [];
+			playing[encryptedName].verifier = verifier + 1;
 		}
-
-		var ranges = playing[encryptedName].ranges;
+		if (verifier == playing[encryptedName].verifier) {
+			playing[encryptedName].verifier = playing[encryptedName].verifier + 1;
+		} else if (verifier + 1 == playing[encryptedName].verifier) {
+			res.redirect(301, req.originalUrl.split("&verifier")[0] + "&verifier=" + btoa(encrypt(req.query.username, req.query.session, playing[encryptedName].verifier.toString())));
+			return;
+		} else {
+			console.log("Incorrect verifier.");
+			return;
+		}
 
 		var file = path.resolve(dir, filename);
 		if (req.headers.range) {
 			var range = req.headers.range;
 			var positions = range.replace(/bytes=/, "").split("-");
 			var start = parseInt(positions[0], 10);
-			var current = start;
 
 			fs.stat(file, function (err, stats) {
 				if (err) {
@@ -121,28 +129,7 @@ app.get('/download', function (req, res){
 				var total = stats.size;
 				console.log("Request for partial file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
 				var end = positions[1] ? parseInt(positions[1], 10) : total - 1;
-				end = end - start > 900000 ? start + 900000 : end; /////////
-
-				var activeRange;
-				for (var i = 0; i < ranges.length; i++) {
-					if (start >= ranges[i].start && start < ranges[i].end) {
-						/*
-						start = ranges[i].end;
-						current = start;
-						if (end <= ranges[i].end) {
-							console.log("Sending 304");
-							res.setHeader("ETag", filename);
-							res.setHeader("Cache-Control", "private, max-age=432000000");
-							res.setHeader("Content-Range", "bytes " + start + "-" + end + "/" + total);
-							res.sendStatus(304);
-							return;
-							end = start + 900000;
-						}
-						*/
-						activeRange = ranges[i];
-						break;
-					}
-				}
+				end = end - start > 10000000 ? start + 10000000 : end; /////////
 
 				var chunksize = (end - start) + 1;
 
@@ -151,52 +138,11 @@ app.get('/download', function (req, res){
 					"Accept-Ranges": "bytes",
 					"Content-Length": chunksize,
 					"Content-Type": "video/mp4",
-					"Cache-Control": "private, max-age=432000000",
-					"Last-Modified": stats.mtime,
-					"ETag": filename
+					"Last-Modified": stats.mtime
 				});
 
 				var stream = fs.createReadStream(file, { start: start, end: end })
-				.on("data", function (chunk) {
-					current = current + chunk.length;
-
-					if (!activeRange) {
-						var tempRange = {};
-						tempRange.start = start;
-						tempRange.end = current;
-						var pushed = false;
-						for (var i = 0; i < ranges.length; i++) {
-							if (start < ranges[i].start) {
-								ranges.splice(i, 0, tempRange);
-								activeRange = ranges[i];
-								pushed = true;
-								break;
-							}
-						}
-						if (!pushed) {
-							ranges.push(tempRange);
-							activeRange = ranges[ranges.length - 1];
-						}
-					} else {
-						if (current > activeRange.end) {
-							activeRange.end = current;
-						} else {
-							console.log("Duplicate request.");
-						}
-					}
-					for (var i = 0; i < ranges.length - 1; i++) {
-						if (ranges[i].end >= ranges[i + 1].start) {
-							ranges[i].end = ranges[i + 1].end;
-							ranges.splice(i + 1, 1);
-							if (start >= ranges[i].start && start < ranges[i].end) {
-								activeRange = ranges[i];
-								break;
-							}
-							i--;
-						}
-					}
-					console.log(JSON.stringify(ranges));
-				}).on("open", function () {
+				.on("open", function () {
 					stream.pipe(res);
 				}).on("error", function (err) {
 					try {
@@ -217,7 +163,8 @@ app.get('/download', function (req, res){
 				res.writeHead(200, {
 					'Content-Length': total,
 					"Accept-Ranges": "bytes",
-					'Content-Type': 'video/mp4'
+					'Content-Type': 'video/mp4',
+					"Last-Modified": stats.mtime
 				});
 				var stream = fs.createReadStream(file)
 				.on("open", function () {
@@ -247,12 +194,12 @@ var createSRPResponse = function (socket, user) {
 		if (!userKeys[user.username]) {
 			userKeys[user.username] = {keys: []};
 		}
-		srpMsg.encryptedPhrase = CryptoJS.AES.encrypt(sessionNumber, srpServer.getSharedKey()).toString();
 		var key = {};
 		key.content = srpServer.getSharedKey();
 		key.sessionNumber = sessionNumber;
 		key.verified = false;
 		userKeys[user.username].keys.push(key);
+		srpMsg.encryptedPhrase = encrypt(user.username, sessionNumber, sessionNumber, true);
 		socket.emit('login', srpMsg);
 	});
 };
@@ -278,6 +225,28 @@ var decrypt = function (username, sessionNumber, text, disregardVerification) {
 		try {
 			if (disregardVerification || key.verified) {
 				return CryptoJS.AES.decrypt(text, key.content).toString(CryptoJS.enc.Utf8);
+			}
+		} catch (e) { }
+	}
+};
+
+var encryptedPhrases = {};
+
+var encrypt = function(username, sessionNumber, text, disregardVerification) {
+	var key = getKey(username, sessionNumber);
+	if (key) {
+		try {
+			if (disregardVerification || key.verified) {
+				if (!encryptedPhrases[username]) {
+					encryptedPhrases[username] = {};
+				}
+				if (!encryptedPhrases[username][sessionNumber]) {
+					encryptedPhrases[username][sessionNumber] = {};
+				}
+				if (!encryptedPhrases[username][sessionNumber][text]) {
+					encryptedPhrases[username][sessionNumber][text] = CryptoJS.AES.encrypt(text, key.content).toString();
+				}
+				return encryptedPhrases[username][sessionNumber][text];
 			}
 		} catch (e) { }
 	}
