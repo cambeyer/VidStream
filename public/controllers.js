@@ -93,6 +93,16 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		}
 	};
 
+	$('#video').on('progress', function(e) {
+		var ranges = e.originalEvent.target.buffered;
+		var totalTime = 0;
+		for (var i = 0; i < ranges.length; i++) {
+			totalTime = totalTime + (ranges.end(i) - ranges.start(i));
+		}
+		console.log("Updating progress");
+		document.cookie('etag=' + btoa($scope.encrypt((Math.floor(totalTime) + Date.now()).toString())));
+	});
+
 	$scope.login = function () {
 		if ($scope.fields.username && $scope.fields.password) {
 			$scope.loading = true;
