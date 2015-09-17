@@ -9,6 +9,7 @@ var crypto = require('crypto');
 var node_cryptojs = require('node-cryptojs-aes');
 var ffmpeg = require('fluent-ffmpeg');
 var Datastore = require('nedb');
+var cookieParser = require('cookie-parser');
 var jsrp = require('jsrp');
 var atob = require('atob');
 var btoa = require('btoa');
@@ -17,6 +18,7 @@ var btoa = require('btoa');
 var dir = __dirname + '/files/';
 
 app.use(busboy());
+app.use(cookieParser());
 
 //files in the public directory can be directly queried for via HTTP
 app.use(express.static(path.join(__dirname, 'public')));
@@ -99,20 +101,24 @@ app.route('/upload').post(function (req, res, next) {
 app.get('/download', function (req, res){
 	var encryptedName = atob(req.query.file);
 	var filename = decrypt(req.query.username, req.query.session, encryptedName);
-	var verifier = req.query.verifier ? parseInt(decrypt(req.query.username, req.query.session, atob(req.query.verifier))): 0;
+	var verifier = req.cookies.etag ? parseInt(decrypt(req.query.username, req.query.session, atob(req.cookies.etag)), 10): 0;
 	if (filename) {
 
 		if (!playing[encryptedName]) {
 			playing[encryptedName] = {};
-			playing[encryptedName].verifier = verifier + 1;
+			playing[encryptedName].verifier = 0;
 		}
 		if (verifier == playing[encryptedName].verifier) {
 			playing[encryptedName].verifier = playing[encryptedName].verifier + 1;
-		} else if (verifier + 1 == playing[encryptedName].verifier) {
-			res.redirect(301, req.originalUrl.split("&verifier")[0] + "&verifier=" + btoa(encrypt(req.query.username, req.query.session, playing[encryptedName].verifier.toString())));
-			return;
 		} else {
-			console.log("Incorrect verifier.");
+			//console.log("Incorrect verifier " + verifier + " " + parseInt(playing[encryptedName].verifier));
+			if (verifier !== 0 && playing[encryptedName].verifier == 0) {
+				res.setHeader("Set-Cookie", "etag=" + btoa(encrypt(req.query.username, req.query.session, "0")));
+				res.setHeader("Location", req.originalUrl);
+				res.sendStatus(307);
+			} else {
+				res.sendStatus(401);
+			}
 			return;
 		}
 
@@ -129,7 +135,6 @@ app.get('/download', function (req, res){
 				var total = stats.size;
 				console.log("Request for partial file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
 				var end = positions[1] ? parseInt(positions[1], 10) : total - 1;
-				end = end - start > 10000000 ? start + 10000000 : end; /////////
 
 				var chunksize = (end - start) + 1;
 
@@ -138,7 +143,7 @@ app.get('/download', function (req, res){
 					"Accept-Ranges": "bytes",
 					"Content-Length": chunksize,
 					"Content-Type": "video/mp4",
-					"Last-Modified": stats.mtime
+					"Set-Cookie": "etag=" + btoa(encrypt(req.query.username, req.query.session, playing[encryptedName].verifier.toString()))
 				});
 
 				var stream = fs.createReadStream(file, { start: start, end: end })
@@ -164,7 +169,7 @@ app.get('/download', function (req, res){
 					'Content-Length': total,
 					"Accept-Ranges": "bytes",
 					'Content-Type': 'video/mp4',
-					"Last-Modified": stats.mtime
+					"Set-Cookie": "etag=" + btoa(encrypt(req.query.username, req.query.session, playing[encryptedName].verifier.toString()))
 				});
 				var stream = fs.createReadStream(file)
 				.on("open", function () {
@@ -179,7 +184,7 @@ app.get('/download', function (req, res){
 			});
 		}
 	} else {
-		res.send(401, 'Not a valid user or session.');
+		res.sendStatus(401);
 	}
 });
 
