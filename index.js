@@ -116,11 +116,11 @@ app.get('/download', function (req, res){
 		if (verifier > playing[encryptedName].verifier) {
 			playing[encryptedName].verifier = verifier;
 		} else {
-			//console.log("Incorrect verifier " + verifier + " " + parseInt(playing[encryptedName].verifier));
+			console.log("Incorrect verifier " + verifier + " " + parseInt(playing[encryptedName].verifier));
 			if (verifier !== 0 && playing[encryptedName].verifier == -1) {
 				var etag = btoa(encrypt(req.query.username, req.query.session, "0"));
-				res.setHeader("Set-Cookie", "etag=" + etag);
 				res.setHeader("Location", req.originalUrl);
+				res.setHeader("Set-Cookie", "etag=" + etag);
 				res.sendStatus(307);
 			} else {
 				res.sendStatus(401);
