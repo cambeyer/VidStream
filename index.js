@@ -101,7 +101,8 @@ app.route('/upload').post(function (req, res, next) {
 app.get('/download', function (req, res){
 	var encryptedName = atob(req.query.file);
 	var filename = decrypt(req.query.username, req.query.session, encryptedName);
-	var verifier = req.cookies.etag ? parseInt(decrypt(req.query.username, req.query.session, atob(req.cookies.etag)), 10): 0;
+	var hashed = crypto.createHash('md5').update(req.query.file).digest('hex');
+	var verifier = req.cookies[hashed] ? parseInt(decrypt(req.query.username, req.query.session, atob(req.cookies[hashed])), 10): 0;
 	if (filename) {
 
 		if (!req.headers.range && playing[encryptedName] && playing[encryptedName].verifier > -1) {
@@ -118,9 +119,9 @@ app.get('/download', function (req, res){
 		} else {
 			console.log("Incorrect verifier " + verifier + " " + parseInt(playing[encryptedName].verifier));
 			if (verifier !== 0 && playing[encryptedName].verifier == -1) {
-				var etag = btoa(encrypt(req.query.username, req.query.session, "0"));
 				res.setHeader("Location", req.originalUrl);
-				res.setHeader("Set-Cookie", "etag=" + etag);
+				var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours+1);
+				res.setHeader("Set-Cookie", hashed + "=" + btoa(encrypt(req.query.username, req.query.session, "0")) + "; Expires=" + exp);
 				res.sendStatus(307);
 			} else {
 				res.sendStatus(401);

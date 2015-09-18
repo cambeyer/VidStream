@@ -99,7 +99,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		for (var i = 0; i < ranges.length; i++) {
 			totalTime = totalTime + (ranges.end(i) - ranges.start(i));
 		}
-		$cookies.put('etag', btoa($scope.encrypt((Math.floor(totalTime) + Date.now()).toString())));
+		var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()+1);
+		$cookies.put(CryptoJS.MD5(videoElem.currentSrc.split('file=')[1]).toString(), btoa($scope.encrypt((Math.floor(totalTime) + now.getTime()).toString())), {'expires': exp});
 	};
 
 	$scope.login = function () {
