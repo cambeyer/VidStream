@@ -18,6 +18,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.srpObj = {};
 
 	$scope.sessionNumber = 0;
+	$scope.videoFile;
+	$scope.lastSeeked = 0;
 	$scope.encryptedPhrases = {};
 
 	$scope.fields = {
@@ -88,20 +90,18 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.videoString = function (videoFile) {
 		if ($scope.fields.username && $scope.sessionNumber) {
+			$scope.videoFile = videoFile;
 			/*global btoa*/
-			return "./download?" + "username=" + $scope.fields.username + "&session=" + $scope.sessionNumber + "&file=" + btoa($scope.encrypt(videoFile));
+			return "./download?" + "username=" + $scope.fields.username + "&session=" + $scope.sessionNumber + "&file=" + btoa($scope.encrypt($scope.videoFile));
 		}
 	};
 
-	$scope.videoProgress =  function(videoElem) {
-		var ranges = videoElem.buffered;
-		var totalTime = 0;
-		for (var i = 0; i < ranges.length; i++) {
-			totalTime = totalTime + (ranges.end(i) - ranges.start(i));
+	$interval(function() {
+		if ($scope.videoFile && $scope.sessionNumber) {
+			var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()+1);
+			$cookies.put(CryptoJS.MD5($scope.videoFile + $scope.sessionNumber).toString(), btoa($scope.encrypt(now.getTime().toString()).toString()), {'expires': exp});
 		}
-		var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()+1);
-		$cookies.put(CryptoJS.MD5(videoElem.currentSrc.split('file=')[1]).toString(), btoa($scope.encrypt((Math.floor(totalTime) + now.getTime()).toString())), {'expires': exp});
-	};
+	}, 2000);
 
 	$scope.login = function () {
 		if ($scope.fields.username && $scope.fields.password) {

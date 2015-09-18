@@ -101,11 +101,12 @@ app.route('/upload').post(function (req, res, next) {
 app.get('/download', function (req, res){
 	var encryptedName = atob(req.query.file);
 	var filename = decrypt(req.query.username, req.query.session, encryptedName);
-	var hashed = crypto.createHash('md5').update(req.query.file).digest('hex');
+	var hashed = crypto.createHash('md5').update(filename + req.query.session).digest('hex');
 	var verifier = req.cookies[hashed] ? parseInt(decrypt(req.query.username, req.query.session, atob(req.cookies[hashed])), 10): 0;
 	if (filename) {
 
 		if (!req.headers.range && playing[encryptedName] && playing[encryptedName].verifier > -1) {
+			//prevent whole-file requests after partials have been received
 			res.sendStatus(401);
 			return;
 		}
@@ -116,17 +117,14 @@ app.get('/download', function (req, res){
 		}
 		if (verifier > playing[encryptedName].verifier) {
 			playing[encryptedName].verifier = verifier;
+			playing[encryptedName].lastVerified = Date.now();
 		} else {
-			console.log("Incorrect verifier " + verifier + " " + parseInt(playing[encryptedName].verifier));
-			if (verifier !== 0 && playing[encryptedName].verifier == -1) {
-				res.setHeader("Location", req.originalUrl);
-				var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours+1);
-				res.setHeader("Set-Cookie", hashed + "=" + btoa(encrypt(req.query.username, req.query.session, "0")) + "; Expires=" + exp);
-				res.sendStatus(307);
-			} else {
+			if (!req.headers.range || Date.now() - playing[encryptedName].lastVerified > 5000) {
 				res.sendStatus(401);
+				return;
+			} else {
+				//it's a range request with a recent verification so we let it through
 			}
-			return;
 		}
 
 		var file = path.resolve(dir, filename);
