@@ -8,6 +8,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.uploadPercent = 0;
 	$scope.processPercent = 0;
 
+	$scope.activeVideo = 'c2a5a4338214ae3956f65d27d81fc591.mp4';
+
 	$scope.authed = false;
 	$scope.loading = false;
 
@@ -98,7 +100,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$interval(function() {
 		if ($scope.videoFile && $scope.sessionNumber) {
-			var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()+1);
+			var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()+1, now.getMinutes(), now.getSeconds());
 			$cookies.put(CryptoJS.MD5($scope.videoFile + $scope.sessionNumber).toString(), btoa($scope.encrypt(now.getTime().toString()).toString()), {'expires': exp});
 		}
 	}, 2000);
