@@ -1,7 +1,20 @@
 //all of the user-defined Angular directives
 /*global angular*/
-angular.module('VidStreamApp.directives', []).
-directive('loginform', function () {
+angular.module('VidStreamApp.directives', [])
+.directive('videoplayer', function($parse) {
+    return {
+        restrict: 'A',
+        link: function($scope, element, attrs, controller) {
+            attrs.$observe('specialsrc', function() {
+            	if ($scope.videoString($scope.activeVideo)) {
+            		alert("hello");
+            		element.attr('src', $scope.videoString($scope.activeVideo));
+            	}
+            });
+        }
+    };
+})
+.directive('loginform', function () {
 	return {
 		scope: false,
 		replace: true,

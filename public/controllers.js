@@ -2,13 +2,13 @@
 angular.module('VidStreamApp', ['VidStreamApp.controllers', 'VidStreamApp.directives', 'ngAnimate']);
 
 //main Angular module
-angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainController', function ($scope, $rootScope, $interval, $timeout, $cookies, $document, $window) {
+angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainController', function ($scope, $rootScope, $interval, $timeout, $cookies, $document, $window, $sce) {
 
 	$scope.progress = false;
 	$scope.uploadPercent = 0;
 	$scope.processPercent = 0;
 
-	$scope.activeVideo = 'c2a5a4338214ae3956f65d27d81fc591.mp4';
+	$scope.activeVideo = '66e1a8c63dad0697ff02b583a7ee1139.mp4';
 
 	$scope.authed = false;
 	$scope.loading = false;
@@ -21,7 +21,6 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.sessionNumber = 0;
 	$scope.videoFile;
-	$scope.lastSeeked = 0;
 	$scope.encryptedPhrases = {};
 
 	$scope.fields = {
@@ -94,7 +93,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		if ($scope.fields.username && $scope.sessionNumber) {
 			$scope.videoFile = videoFile;
 			/*global btoa*/
-			return "./download?" + "username=" + $scope.fields.username + "&session=" + $scope.sessionNumber + "&file=" + btoa($scope.encrypt($scope.videoFile));
+			return $sce.trustAsResourceUrl("./download?" + "username=" + $scope.fields.username + "&session=" + $scope.sessionNumber + "&file=" + btoa($scope.encrypt($scope.videoFile)));
 		}
 	};
 
@@ -163,6 +162,39 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$scope.error = false;
 				$cookies.put('username', $scope.fields.username);
 				//$scope.fields.password = "";
+
+/*
+				$('video').mediaelementplayer({
+					// shows debug errors on screen
+    				enablePluginDebug: true,
+				    // specify to force MediaElement to use a particular video or audio type
+				    type: 'video/mp4',
+				    // useful for <audio> player loops
+				    loop: false,
+				    // the order of controls you want on the control bar (and other plugins below)
+				    features: ['playpause','current', 'progress','duration','volume','fullscreen'],
+				    // Hide controls when playing and mouse is not over the video
+				    alwaysShowControls: false,
+				    // force iPad's native controls
+				    iPadUseNativeControls: false,
+				    // force iPhone's native controls
+				    iPhoneUseNativeControls: false,
+				    // force Android's native controls
+				    AndroidUseNativeControls: false,
+				    // forces the hour marker (##:00:00)
+				    alwaysShowHours: false,
+				    // show framecount in timecode (##:00:00:00)
+				    showTimecodeFrameCount: false,
+				    // turns keyboard support on and off for this instance
+				    enableKeyboard: true,
+				    // when this player starts, it will pause other players
+				    pauseOtherPlayers: true,
+				    // fires when a problem is detected
+				    error: function () {
+						alert('hello');
+				    }
+				});
+*/
 
 				var challenge = {};
 				challenge.username = $scope.fields.username;

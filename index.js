@@ -8,11 +8,10 @@ var io = require('socket.io')(http);
 var crypto = require('crypto');
 var node_cryptojs = require('node-cryptojs-aes');
 var ffmpeg = require('fluent-ffmpeg');
-var Datastore = require('nedb');
+var nedb = require('nedb');
 var cookieParser = require('cookie-parser');
 var jsrp = require('jsrp');
 var atob = require('atob');
-var btoa = require('btoa');
 
 //set the directory where files are served from and uploaded to
 var dir = __dirname + '/files/';
@@ -32,7 +31,7 @@ var playing = {};
 var CryptoJS = node_cryptojs.CryptoJS;
 
 var db = {};
-db.users = new Datastore({ filename: dir + "users.db", autoload: true });
+db.users = new nedb({ filename: dir + "users.db", autoload: true });
 db.users.persistence.setAutocompactionInterval(200000);
 db.users.ensureIndex({ fieldName: 'username', unique: true });
 
@@ -120,6 +119,7 @@ app.get('/download', function (req, res){
 			playing[encryptedName].lastVerified = Date.now();
 		} else {
 			if (!req.headers.range || Date.now() - playing[encryptedName].lastVerified > 5000) {
+				//if we haven't received a range request with an updated verifier in the last 5 seconds, stop the request
 				res.sendStatus(401);
 				return;
 			} else {
