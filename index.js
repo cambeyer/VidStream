@@ -146,11 +146,6 @@ app.get('/download', function (req, res){
 				});
 
 				var stream = fs.createReadStream(file, { start: start, end: end })
-				.on("data", function() {
-					if (Date.now() - playing[encryptedName].lastVerified > 5000) {
-						res.end();
-					}
-				})
 				.on("open", function () {
 					stream.pipe(res);
 				}).on("error", function (err) {
@@ -175,11 +170,6 @@ app.get('/download', function (req, res){
 					'Content-Type': 'video/mp4',
 				});
 				var stream = fs.createReadStream(file)
-				.on("data", function() {
-					if (Date.now() - playing[encryptedName].lastVerified > 5000) {
-						res.end();
-					}
-				})
 				.on("open", function () {
 					stream.pipe(res);
 				}).on("error", function (err) {
