@@ -7,9 +7,9 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var crypto = require('crypto');
 var node_cryptojs = require('node-cryptojs-aes');
+var CryptoJS = node_cryptojs.CryptoJS;
 var ffmpeg = require('fluent-ffmpeg');
 var nedb = require('nedb');
-var cookieParser = require('cookie-parser');
 var jsrp = require('jsrp');
 var atob = require('atob');
 
@@ -17,19 +17,17 @@ var atob = require('atob');
 var dir = __dirname + '/files/';
 
 app.use(busboy());
-app.use(cookieParser());
 
 //files in the public directory can be directly queried for via HTTP
 app.use(express.static(path.join(__dirname, 'public')));
 
 var processing = {};
 var done = [];
+
 var userKeys = {};
 var verifiers = {};
 
 var playing = {};
-
-var CryptoJS = node_cryptojs.CryptoJS;
 
 var db = {};
 db.users = new nedb({ filename: dir + "users.db", autoload: true });
@@ -113,7 +111,7 @@ app.get('/download', function (req, res){
 			playing[encryptedName].verifier = verifier;
 			playing[encryptedName].lastVerified = Date.now();
 		} else {
-			if (verifier < playing[encryptedName].verifier || Date.now() - playing[encryptedName].lastVerified > 3000) {
+			if (verifier < playing[encryptedName].verifier || Date.now() - playing[encryptedName].lastVerified > 5000) {
 				//if we haven't received a range request with an updated verifier in the last 5 seconds, stop the request
 				res.sendStatus(401);
 				return;
