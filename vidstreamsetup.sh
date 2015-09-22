@@ -1,13 +1,25 @@
 #!/bin/bash
+#update the sources
 sudo apt-get update
-sudo apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
+#upgrade any packages that are out of date, keeping existing files and accepting all defaults
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
+#add the repository for nodejs
 curl -sL https://deb.nodesource.com/setup | sudo bash -
-sudo apt-get install nodejs build-essential git
+#install node and gcc and git without prompting
+sudo apt-get install -y nodejs build-essential git
+#clone the repo
 git clone https://github.com/cambeyer/VidStream.git
-cd ~/Vidstream
+#change directories into the newly-cloned repo
+cd ~/VidStream
+#run npm to install all project dependencies
 sudo npm install
-sudo add-apt-repository ppa:kirillshkrogalev/ffmpeg-next
+#add the reposotiry for ffmpeg
+sudo add-apt-repository ppa:kirillshkrogalev/ffmpeg-next -y
+#update the sources
 sudo apt-get update
-sudo apt-get install ffmpeg
-sudo echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDbAF49Cs+o7T5tWjVCeEPXWfJIVe+zSL2PnSgqRM4H1TbQxR11pcBojPuuLnE50L0sS2Xj8x8uFr2cWPtkcE5k5p0quMqwFxA2WMo5JBrkxkVbOjRk1kw3R+2mgvbPLdliFGE1UAKIYbwXHRv2amF/G1QSpQK7zKVyYpQ/wV3oc0fxpRJcxAo9hBLRqtC/A41ycFWRljFp8vcK6jqWiIaqdbQ0Let2C3pSBs1KRRz0FzzzSIn7XqWYyR7WVYErN1DGsyjLECXxAIzUs+EuXFAPmtFV8QVQtdNbrQwq708cZQhqXNTpH+48/y8XTmowV8/vKEJ41+uINdqG14K+C9XV cam.beyer@gmail.com" >> ~/.ssh/authorized_keys
-curl -L https://raw.githubusercontent.com/c9/install/master/install.sh | sudo bash
+#install ffmpeg without prompting
+sudo apt-get install -y ffmpeg
+#add the cloud9 key for authorized login
+sudo echo "KEY HERE" >> ~/.ssh/authorized_keys
+#run the cloud9 installer for hooking in from the interface
+curl -sL https://raw.githubusercontent.com/c9/install/master/install.sh | sudo bash
