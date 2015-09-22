@@ -99,8 +99,10 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$interval(function() {
 		if ($scope.videoFile && $scope.sessionNumber) {
-			var now = new Date(), exp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()+1, now.getMinutes(), now.getSeconds());
-			$cookies.put(CryptoJS.MD5($scope.videoFile + $scope.sessionNumber).toString(), btoa($scope.encrypt(now.getTime().toString()).toString()), {'expires': exp});
+			var pingObj = {};
+			pingObj.hashed = CryptoJS.MD5($scope.videoFile + $scope.sessionNumber).toString();
+			pingObj.value = btoa($scope.encrypt(Date.now().toString()).toString());
+			$scope.socket.emit('keepalive', pingObj);
 		}
 	}, 2000);
 
@@ -162,39 +164,6 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$scope.error = false;
 				$cookies.put('username', $scope.fields.username);
 				//$scope.fields.password = "";
-
-/*
-				$('video').mediaelementplayer({
-					// shows debug errors on screen
-    				enablePluginDebug: true,
-				    // specify to force MediaElement to use a particular video or audio type
-				    type: 'video/mp4',
-				    // useful for <audio> player loops
-				    loop: false,
-				    // the order of controls you want on the control bar (and other plugins below)
-				    features: ['playpause','current', 'progress','duration','volume','fullscreen'],
-				    // Hide controls when playing and mouse is not over the video
-				    alwaysShowControls: false,
-				    // force iPad's native controls
-				    iPadUseNativeControls: false,
-				    // force iPhone's native controls
-				    iPhoneUseNativeControls: false,
-				    // force Android's native controls
-				    AndroidUseNativeControls: false,
-				    // forces the hour marker (##:00:00)
-				    alwaysShowHours: false,
-				    // show framecount in timecode (##:00:00:00)
-				    showTimecodeFrameCount: false,
-				    // turns keyboard support on and off for this instance
-				    enableKeyboard: true,
-				    // when this player starts, it will pause other players
-				    pauseOtherPlayers: true,
-				    // fires when a problem is detected
-				    error: function () {
-						alert('hello');
-				    }
-				});
-*/
 
 				var challenge = {};
 				challenge.username = $scope.fields.username;
