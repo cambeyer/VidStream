@@ -82,6 +82,10 @@ button, .button {
 	padding-right: 20px;
 }
 
+.flowplayer {
+   max-width: 640px;
+}
+
 .hidden {
   display: none !important;
 }

@@ -105,12 +105,6 @@ app.get('/download', function (req, res){
 	var verifier = verifiers[hashed] ? parseInt(decrypt(req.query.username, req.query.session, atob(verifiers[hashed])), 10): 0;
 	if (filename) {
 
-		if (!req.headers.range && playing[encryptedName] && playing[encryptedName].verifier > -1) {
-			//prevent whole-file requests after partials have been received
-			res.sendStatus(401);
-			return;
-		}
-
 		if (!playing[encryptedName]) {
 			playing[encryptedName] = {};
 			playing[encryptedName].verifier = -1;
@@ -119,12 +113,12 @@ app.get('/download', function (req, res){
 			playing[encryptedName].verifier = verifier;
 			playing[encryptedName].lastVerified = Date.now();
 		} else {
-			if (verifier < playing[encryptedName].verifier || !req.headers.range || Date.now() - playing[encryptedName].lastVerified > 5000) {
+			if (verifier < playing[encryptedName].verifier || Date.now() - playing[encryptedName].lastVerified > 3000) {
 				//if we haven't received a range request with an updated verifier in the last 5 seconds, stop the request
 				res.sendStatus(401);
 				return;
 			} else {
-				//it's a range request with a recent verification so we let it through
+				//it's a request with a recent verification so we let it through
 			}
 		}
 
@@ -139,7 +133,7 @@ app.get('/download', function (req, res){
 					return;
 				}
 				var total = stats.size;
-				console.log("Request for partial file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
+				//console.log("Request for partial file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
 				var end = positions[1] ? parseInt(positions[1], 10) : total - 1;
 
 				var chunksize = (end - start) + 1;
@@ -152,6 +146,11 @@ app.get('/download', function (req, res){
 				});
 
 				var stream = fs.createReadStream(file, { start: start, end: end })
+				.on("data", function() {
+					if (Date.now() - playing[encryptedName].lastVerified > 5000) {
+						res.end();
+					}
+				})
 				.on("open", function () {
 					stream.pipe(res);
 				}).on("error", function (err) {
@@ -168,7 +167,7 @@ app.get('/download', function (req, res){
 					return;
 				}
 				var total = stats.size;
-				console.log("Request for whole file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
+				//console.log("Request for whole file: " + filename + "; size: " + (total / Math.pow(2, 20)).toFixed(1) + " MB");
 
 				res.writeHead(200, {
 					'Content-Length': total,
@@ -176,6 +175,11 @@ app.get('/download', function (req, res){
 					'Content-Type': 'video/mp4',
 				});
 				var stream = fs.createReadStream(file)
+				.on("data", function() {
+					if (Date.now() - playing[encryptedName].lastVerified > 5000) {
+						res.end();
+					}
+				})
 				.on("open", function () {
 					stream.pipe(res);
 				}).on("error", function (err) {

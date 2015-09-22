@@ -104,7 +104,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			pingObj.value = btoa($scope.encrypt(Date.now().toString()).toString());
 			$scope.socket.emit('keepalive', pingObj);
 		}
-	}, 2000);
+	}, 1000);
 
 	$scope.login = function () {
 		if ($scope.fields.username && $scope.fields.password) {
@@ -166,6 +166,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				//$scope.fields.password = "";
 
 				$(".player").flowplayer({
+					fullscreen: true,
+					native_fullscreen: true,
 				    clip: {
 				        sources: [
 				              { type: "video/mp4",
