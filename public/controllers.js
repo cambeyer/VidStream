@@ -8,7 +8,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.uploadPercent = 0;
 	$scope.processPercent = 0;
 
-	$scope.activeVideo = 'c2a5a4338214ae3956f65d27d81fc591.mp4';
+	$scope.activeVideo = 'd726f8039ad55354ea831a5f335a320f.mp4';
 
 	$scope.authed = false;
 	$scope.loading = false;
@@ -72,7 +72,10 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	};
 
 	$scope.socket.on('reconnect', function (num) {
-		$scope.login();
+		console.log("Reconnect");
+		$scope.$apply(function () {
+			$scope.login();
+		});
 	});
 
 	$scope.resetControls = function () {
@@ -107,6 +110,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.login = function () {
 		if ($scope.fields.username && $scope.fields.password) {
+			$scope.authed = false;
 			$scope.loading = true;
 			$scope.sessionNumber = 0;
 			/*global jsrp*/
