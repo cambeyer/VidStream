@@ -15,8 +15,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.confirmPassword = false;
 
-	/*global jsrp*/
-	$scope.srpClient = new jsrp.client();
+	$scope.srpClient;
 	$scope.srpObj = {};
 
 	$scope.sessionNumber = 0;
@@ -109,6 +108,9 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.login = function () {
 		if ($scope.fields.username && $scope.fields.password) {
 			$scope.loading = true;
+			$scope.sessionNumber = 0;
+			/*global jsrp*/
+			$scope.srpClient = new jsrp.client();
 			if (!$scope.confirmPassword) {
 				/*global CryptoJS*/
 				$scope.srpClient.init({ username: $scope.fields.username, password: CryptoJS.MD5($scope.fields.password).toString() }, function () {
@@ -146,6 +148,14 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$('#confirm').focus();
 	});
 
+	$scope.verify = function() {
+		var challenge = {};
+		challenge.username = $scope.fields.username;
+		challenge.sessionNumber = $scope.sessionNumber;
+		challenge.encryptedPhrase = $scope.encrypt('client');
+		$scope.socket.emit('verify', challenge);
+	};
+
 	$scope.socket.on('login', function (srpResponse) {
 		$scope.srpClient.setSalt(srpResponse.salt);
 		$scope.srpClient.setServerPublicKey(srpResponse.publicKey);
@@ -182,11 +192,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$('.fp-context-menu').addClass('hidden');
 				$('.fp-volume').css('right', '40px');
 
-				var challenge = {};
-				challenge.username = $scope.fields.username;
-				challenge.sessionNumber = $scope.sessionNumber;
-				challenge.encryptedPhrase = $scope.encrypt('client');
-				$scope.socket.emit('verify', challenge);
+				$scope.verify();
 				//load list of videos from the server
 			}
 		});
