@@ -165,6 +165,21 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$cookies.put('username', $scope.fields.username);
 				//$scope.fields.password = "";
 
+				$(".player").flowplayer({
+				    clip: {
+				        sources: [
+				              { type: "video/mp4",
+				                src:  $scope.videoString($scope.activeVideo) }
+				        ]
+				    }
+				});
+
+				$('.fp-embed').remove();
+				$('.fp-brand').remove();
+				$('a[href*="flowplayer"]').remove();
+				$('.fp-context-menu').addClass('hidden');
+				$('.fp-volume').css('right', '40px');
+
 				var challenge = {};
 				challenge.username = $scope.fields.username;
 				challenge.sessionNumber = $scope.sessionNumber;
