@@ -143,16 +143,20 @@ app.get('/download', function (req, res){
 					"Content-Type": "video/mp4"
 				});
 
-				var stream = fs.createReadStream(file, { start: start, end: end })
-				.on("open", function () {
-					stream.pipe(res);
-				}).on("error", function (err) {
-					try {
-						res.end(err);
-					} catch (e) {
-						console.log("Error streaming out.");
-					}
-				});
+				try {
+					var stream = fs.createReadStream(file, { start: start, end: end })
+					.on("open", function () {
+						stream.pipe(res);
+					}).on("error", function (err) {
+						try {
+							res.end(err);
+						} catch (e) {
+							console.log("Error streaming out.");
+						}
+					});
+				} catch (e) {
+					console.log("Error streaming out.");
+				}
 			});
 		} else {
 			fs.stat(file, function (err, stats) {
@@ -167,16 +171,20 @@ app.get('/download', function (req, res){
 					"Accept-Ranges": "bytes",
 					'Content-Type': 'video/mp4',
 				});
-				var stream = fs.createReadStream(file)
-				.on("open", function () {
-					stream.pipe(res);
-				}).on("error", function (err) {
-					try {
-						res.end(err);
-					} catch (e) {
-						console.log("Error streaming out.");
-					}
-				});
+				try {
+					var stream = fs.createReadStream(file)
+					.on("open", function () {
+						stream.pipe(res);
+					}).on("error", function (err) {
+						try {
+							res.end(err);
+						} catch (e) {
+							console.log("Error streaming out.");
+						}
+					});
+				} catch (e) {
+					console.log("Error streaming out.");
+				}
 			});
 		}
 	} else {
