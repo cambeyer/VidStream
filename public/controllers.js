@@ -113,9 +113,9 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			$scope.authed = false;
 			$scope.loading = true;
 			$scope.sessionNumber = 0;
-			/*global jsrp*/
-			$scope.srpClient = new jsrp.client();
 			if (!$scope.confirmPassword) {
+				/*global jsrp*/
+				$scope.srpClient = new jsrp.client();
 				/*global CryptoJS*/
 				$scope.srpClient.init({ username: $scope.fields.username, password: CryptoJS.MD5($scope.fields.password).toString() }, function () {
 					$scope.srpObj = {};
