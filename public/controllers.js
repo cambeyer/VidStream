@@ -255,13 +255,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 						break;
 					}
 				}
-				if (!$scope.activeVideo.filename && $scope.videoList.length > 0) {
-					$scope.activeVideo.filename = $scope.videoList[0].filename;
-					$scope.setVideo();
-					return;
-				}
 				if (!found) {
-					$scope.activeVideo.filename = "";
+					if ($scope.videoList.length > 0) {
+						$scope.activeVideo.filename = $scope.videoList[0].filename;
+					} else {
+						$scope.activeVideo.filename = "";
+					}
 					$scope.setVideo();
 				}
 			}
