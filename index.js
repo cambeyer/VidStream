@@ -50,7 +50,7 @@ app.route('/upload').post(function (req, res, next) {
       		res.end(md5);
 
 			ffmpeg(filename)
-				.videoBitrate('2048k')
+				.videoBitrate('1024k')
 				.videoCodec('libx264')
 				.fps(30)
 				.audioBitrate('128k')

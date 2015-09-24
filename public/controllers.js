@@ -8,7 +8,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.uploadPercent = 0;
 	$scope.processPercent = 0;
 
-	$scope.activeVideo = 'c2a5a4338214ae3956f65d27d81fc591.mp4';
+	$scope.activeVideo = 'dbcf80353713bb140253899f504aa00c.mp4';
 
 	$scope.authed = false;
 	$scope.loading = false;
