@@ -380,6 +380,7 @@ io.on('connection', function (socket) {
 			db.videos.remove({ filename: md5 }, {}, function (err, numRemoved) {
 				if (!err) {
 					fs.unlinkSync(dir + md5);
+					console.log("Deleted " + md5);
 					sendList(delReq.username);
 				}
 			});
