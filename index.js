@@ -55,6 +55,14 @@ var getFiles = function (dir, files_) {
 app.route('/upload').post(function (req, res, next) {
 	var hash = crypto.createHash('md5');
 	var md5;
+	var sessionVars = {};
+	var date;
+	req.busboy.on('field', function (fieldname, val) {
+		sessionVars[fieldname] = val;
+		if (sessionVars.username && sessionVars.session && sessionVars.date) {
+			date = decrypt(sessionVars.username, sessionVars.session, sessionVars.date);
+		}
+	});
 	req.busboy.on('file', function (fieldname, stream, name) {
 		console.log("Uploading file: " + name);
 		var filename = dir + path.basename(name);
@@ -99,17 +107,19 @@ app.route('/upload').post(function (req, res, next) {
 						done.push(md5);
 						console.log("Completed without ever receiving a listener");
 					}
-					var vidDetails = {};
-					vidDetails['filename'] = md5;
-					vidDetails['details'] = {}; //populate this with title, description, etc.
-					//vidDetails[md5]['username'] = uploader
-					db.videos.insert(vidDetails, function (err) {
-						if (!err) {
-							fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
-						} else {
-							console.log("DB insert error");
-						}
-					});
+					if (date) {
+						var vidDetails = {};
+						vidDetails['filename'] = md5 + ".mp4";
+						vidDetails['details'] = { username: sessionVars.username, date: date, original: filename }; //populate this with title, description, etc.
+						db.videos.insert(vidDetails, function (err) {
+							if (!err) {
+								fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
+								sendList(sessionVars.username);
+							} else {
+								console.log("DB insert error");
+							}
+						});
+					}
 				})
 				.on('error', function (err, stdout, stderr) {
 					console.log("Transcoding issue: " + err + stderr);
@@ -289,15 +299,26 @@ var encrypt = function(username, sessionNumber, text, disregardVerification) {
 	}
 };
 
+var sendList = function (username, socket) {
+	var vidList = {};
+	vidList['username'] = username;
+	vidList['videos'] = fetchVideos(username);
+	if (socket) {
+		socket.emit('list', vidList);
+	} else {
+		io.emit('list', vidList);
+	}
+};
+
 var fetchVideos = function (username) {
-	/*
-	db.videos.find({}, function (err, videos) { //should restrict by username
+	db.videos.find({ "details.username": username }, function (err, videos) { //should restrict by username
 		if (!err) {
 			return videos;
+		} else {
+			return [];
 		}
 	});
-	return [];
-	*/
+	/*
 	var result = getFiles(dir);
 	for (var i = 0; i < result.length; i++) {
 		if (result[i].substr(result[i].length - 4, 4) !== ".mp4") {
@@ -309,6 +330,7 @@ var fetchVideos = function (username) {
 		result[i] = { filename: result[i], details: {} };
 	}
 	return result;
+	*/
 };
 
 io.on('connection', function (socket) {
@@ -359,7 +381,7 @@ io.on('connection', function (socket) {
 			if (decrypt(challenge.username, challenge.sessionNumber, challenge.encryptedPhrase, true) == "client") {
 				console.log("Successfully logged in user: " + challenge.username);
 				getKey(challenge.username, challenge.sessionNumber).verified = true;
-				socket.emit('list', fetchVideos(challenge.username));
+				sendList(challenge.username, socket);
 			} else {
 				console.log("Failed login for user: " + challenge.username);
 			}

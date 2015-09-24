@@ -50,6 +50,9 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.uploadFile = function () {
 		var oData = new FormData();
+		oData.append("username", $scope.fields.username);
+		oData.append("session", $scope.sessionNumber);
+		oData.append("date", $scope.encrypt(Date.now().toString()));
 		oData.append("file", document.getElementById("file").files[0]);
 		var oReq = new XMLHttpRequest();
 		oReq.upload.addEventListener('progress', function (e) {
@@ -119,7 +122,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			    clip: {
 			        sources: [
 			              { type: "video/mp4",
-			                src:  $scope.videoString(filename) }
+			                src:  $scope.videoString($scope.video.activeVideo) }
 			        ]
 			    }
 			});
@@ -237,10 +240,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.socket.on('list', function (videoList){
 		$scope.$apply(function () {
-			$scope.videoList = videoList;
-			if (!$scope.video.activeVideo) {
-				$scope.video.activeVideo = $scope.videoList[0];
-				$scope.setVideo();
+			if (videoList.username == $scope.fields.username) {
+				$scope.videoList = videoList.videos;
+				if (!$scope.video.activeVideo) {
+					$scope.video.activeVideo = $scope.videoList[0].filename;
+					$scope.setVideo();
+				}
 			}
 		});
 	});
