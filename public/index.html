@@ -39,7 +39,7 @@
 			<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
 			<div ng-show="progress" style="width: 200px; height: 20px; margin: 20px"><progress-bar></progress-bar></div>
 			<ul>
-				<li ng-repeat="video in videoList"><span ng-click="setVideo(video.filename)">{{video.details.original}} ({{video.filename}})</span><span ng-click="deleteVideo(video.filename)">Delete</span></li>
+				<li ng-repeat="video in videoList"><span ng-click="setVideo(video.filename)">{{video.details.original}} ({{video.filename}})</span> <span ng-click="deleteVideo(video.filename)">(Delete)</span></li>
 			</ul>
 			<div style="padding: 20px">
 				<div class="player"></div>

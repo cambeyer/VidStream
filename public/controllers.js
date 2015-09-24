@@ -248,11 +248,19 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$scope.$apply(function () {
 			if (videoList.username == $scope.fields.username) {
 				$scope.videoList = videoList.videos;
+				var found = false;
+				for (var i = 0; i < $scope.videoList.length; i++) {
+					if ($scope.videoList[i].filename == $scope.activeVideo.filename) {
+						found = true;
+						break;
+					}
+				}
 				if (!$scope.activeVideo.filename && $scope.videoList.length > 0) {
 					$scope.activeVideo.filename = $scope.videoList[0].filename;
 					$scope.setVideo();
+					return;
 				}
-				if ($scope.activeVideo.filename && $scope.videoList.length == 0) {
+				if (!found) {
 					$scope.activeVideo.filename = "";
 					$scope.setVideo();
 				}
