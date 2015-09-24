@@ -110,7 +110,7 @@ app.route('/upload').post(function (req, res, next) {
 					if (date) {
 						var vidDetails = {};
 						vidDetails['filename'] = md5 + ".mp4";
-						vidDetails['details'] = { username: sessionVars.username, date: date, original: filename }; //populate this with title, description, etc.
+						vidDetails['details'] = { username: sessionVars.username, date: date, original: name }; //populate this with title, description, etc.
 						db.videos.insert(vidDetails, function (err) {
 							if (!err) {
 								fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
@@ -299,25 +299,8 @@ var encrypt = function(username, sessionNumber, text, disregardVerification) {
 	}
 };
 
-var sendList = function (username, socket) {
-	var vidList = {};
-	vidList['username'] = username;
-	vidList['videos'] = fetchVideos(username);
-	if (socket) {
-		socket.emit('list', vidList);
-	} else {
-		io.emit('list', vidList);
-	}
-};
-
 var fetchVideos = function (username) {
-	db.videos.find({ "details.username": username }, function (err, videos) { //should restrict by username
-		if (!err) {
-			return videos;
-		} else {
-			return [];
-		}
-	});
+
 	/*
 	var result = getFiles(dir);
 	for (var i = 0; i < result.length; i++) {
@@ -331,6 +314,21 @@ var fetchVideos = function (username) {
 	}
 	return result;
 	*/
+};
+
+var sendList = function (username, socket) {
+	var vidList = {};
+	vidList['username'] = username;
+	db.videos.find({ "details.username": username }, function (err, videos) {
+		if (!err) {
+			vidList['videos'] = videos;
+			if (socket) {
+				socket.emit('list', vidList);
+			} else {
+				io.emit('list', vidList);
+			}
+		}
+	});
 };
 
 io.on('connection', function (socket) {
