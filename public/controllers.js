@@ -8,8 +8,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.uploadPercent = 0;
 	$scope.processPercent = 0;
 
-	$scope.video = {
-		activeVideo: 'c2a5a4338214ae3956f65d27d81fc591.mp4'
+	$scope.activeVideo = {
+		filename: ''
 	};
 
 	$scope.videoList = {};
@@ -108,12 +108,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.setVideo = function (filename) {
 		if (filename) {
-			if ($scope.video.activeVideo == filename) {
+			if ($scope.activeVideo.filename == filename) {
 				return;
 			}
-			$scope.video.activeVideo = filename;
+			$scope.activeVideo.filename = filename;
 		}
-		if ($scope.video.activeVideo) {
+		if ($scope.activeVideo.filename) {
 			$("#flow").remove();
 			$('<div/>', { id: 'flow' }).appendTo('.player');
 			$("#flow").flowplayer({
@@ -122,7 +122,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			    clip: {
 			        sources: [
 			              { type: "video/mp4",
-			                src:  $scope.videoString($scope.video.activeVideo) }
+			                src:  $scope.videoString($scope.activeVideo.filename) }
 			        ]
 			    }
 			});
@@ -215,8 +215,6 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$cookies.put('username', $scope.fields.username);
 				//$scope.fields.password = "";
 
-				$scope.setVideo();
-
 				$scope.verify();
 				//load list of videos from the server
 			}
@@ -242,8 +240,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$scope.$apply(function () {
 			if (videoList.username == $scope.fields.username) {
 				$scope.videoList = videoList.videos;
-				if (!$scope.video.activeVideo) {
-					$scope.video.activeVideo = $scope.videoList[0].filename;
+				if (!$scope.activeVideo.filename) {
+					$scope.activeVideo.filename = $scope.videoList[0].filename;
 					$scope.setVideo();
 				}
 			}
