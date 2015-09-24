@@ -111,7 +111,9 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		delReq['username'] = $scope.fields.username;
 		delReq['session'] = $scope.sessionNumber;
 		delReq['file'] = $scope.encrypt(filename);
-		$scope.socket.emit('delete', delReq);
+		if (confirm("Do you really want to delete this video?")) {
+			$scope.socket.emit('delete', delReq);
+		}
 	};
 
 	$scope.setVideo = function (filename) {
