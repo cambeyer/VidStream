@@ -374,6 +374,17 @@ io.on('connection', function (socket) {
 			}
 		});
 	});
+	socket.on('delete', function (delReq) {
+		var md5 = decrypt(delReq.username, delReq.session, delReq.file);
+		if (md5) {
+			db.videos.remove({ filename: md5 }, {}, function (err, numRemoved) {
+				if (!err) {
+					fs.unlinkSync(dir + md5);
+					sendList(delReq.username);
+				}
+			});
+		}
+	});
 	socket.on('verify', function (challenge) {
 		if (userKeys[challenge.username]) {
 			if (decrypt(challenge.username, challenge.sessionNumber, challenge.encryptedPhrase, true) == "client") {

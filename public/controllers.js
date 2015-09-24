@@ -106,6 +106,14 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		}
 	};
 
+	$scope.deleteVideo = function (filename) {
+		var delReq = {};
+		delReq['username'] = $scope.fields.username;
+		delReq['session'] = $scope.sessionNumber;
+		delReq['file'] = $scope.encrypt(filename);
+		$scope.socket.emit('delete', delReq);
+	};
+
 	$scope.setVideo = function (filename) {
 		if (filename) {
 			if ($scope.activeVideo.filename == filename) {
@@ -113,8 +121,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 			}
 			$scope.activeVideo.filename = filename;
 		}
+		$("#flow").remove();
 		if ($scope.activeVideo.filename) {
-			$("#flow").remove();
 			$('<div/>', { id: 'flow' }).appendTo('.player');
 			$("#flow").flowplayer({
 				fullscreen: true,
@@ -240,8 +248,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$scope.$apply(function () {
 			if (videoList.username == $scope.fields.username) {
 				$scope.videoList = videoList.videos;
-				if (!$scope.activeVideo.filename) {
+				if (!$scope.activeVideo.filename && $scope.videoList.length > 0) {
 					$scope.activeVideo.filename = $scope.videoList[0].filename;
+					$scope.setVideo();
+				}
+				if ($scope.activeVideo.filename && $scope.videoList.length == 0) {
+					$scope.activeVideo.filename = "";
 					$scope.setVideo();
 				}
 			}
