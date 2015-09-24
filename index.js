@@ -34,6 +34,24 @@ db.users = new nedb({ filename: dir + "users.db", autoload: true });
 db.users.persistence.setAutocompactionInterval(200000);
 db.users.ensureIndex({ fieldName: 'username', unique: true });
 
+db.videos = new nedb({ filename: dir + "videos.db", autoload: true});
+db.videos.persistence.setAutocompactionInterval(200000);
+db.videos.ensureIndex({ fieldName: 'filename', unique: true });
+
+var getFiles = function (dir, files_) {
+    files_ = files_ || [];
+    var files = fs.readdirSync(dir);
+    for (var i in files) {
+        var name = dir + '/' + files[i];
+        if (fs.statSync(name).isDirectory()) {
+            getFiles(name, files_);
+        } else {
+            files_.push(name);
+        }
+    }
+    return files_;
+};
+
 app.route('/upload').post(function (req, res, next) {
 	var hash = crypto.createHash('md5');
 	var md5;
@@ -81,7 +99,17 @@ app.route('/upload').post(function (req, res, next) {
 						done.push(md5);
 						console.log("Completed without ever receiving a listener");
 					}
-					fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
+					var vidDetails = {};
+					vidDetails['filename'] = md5;
+					vidDetails['details'] = {}; //populate this with title, description, etc.
+					//vidDetails[md5]['username'] = uploader
+					db.videos.insert(vidDetails, function (err) {
+						if (!err) {
+							fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
+						} else {
+							console.log("DB insert error");
+						}
+					});
 				})
 				.on('error', function (err, stdout, stderr) {
 					console.log("Transcoding issue: " + err + stderr);
@@ -261,6 +289,28 @@ var encrypt = function(username, sessionNumber, text, disregardVerification) {
 	}
 };
 
+var fetchVideos = function (username) {
+	/*
+	db.videos.find({}, function (err, videos) { //should restrict by username
+		if (!err) {
+			return videos;
+		}
+	});
+	return [];
+	*/
+	var result = getFiles(dir);
+	for (var i = 0; i < result.length; i++) {
+		if (result[i].substr(result[i].length - 4, 4) !== ".mp4") {
+			result.splice(i, 1);
+			i--;
+			continue;
+		}
+		result[i] = result[i].split('/')[result[i].split('/').length - 1];
+		result[i] = { filename: result[i], details: {} };
+	}
+	return result;
+};
+
 io.on('connection', function (socket) {
 	socket.on('subscribe', function (md5) {
 		console.log("Subscription from client for processing updates " + md5);
@@ -309,6 +359,7 @@ io.on('connection', function (socket) {
 			if (decrypt(challenge.username, challenge.sessionNumber, challenge.encryptedPhrase, true) == "client") {
 				console.log("Successfully logged in user: " + challenge.username);
 				getKey(challenge.username, challenge.sessionNumber).verified = true;
+				socket.emit('list', fetchVideos(challenge.username));
 			} else {
 				console.log("Failed login for user: " + challenge.username);
 			}

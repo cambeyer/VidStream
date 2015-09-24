@@ -8,7 +8,11 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.uploadPercent = 0;
 	$scope.processPercent = 0;
 
-	$scope.activeVideo = 'dbcf80353713bb140253899f504aa00c.mp4';
+	$scope.video = {
+		activeVideo: 'c2a5a4338214ae3956f65d27d81fc591.mp4'
+	};
+
+	$scope.videoList = {};
 
 	$scope.authed = false;
 	$scope.loading = false;
@@ -99,6 +103,35 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		}
 	};
 
+	$scope.setVideo = function (filename) {
+		if (filename) {
+			if ($scope.video.activeVideo == filename) {
+				return;
+			}
+			$scope.video.activeVideo = filename;
+		}
+		if ($scope.video.activeVideo) {
+			$("#flow").remove();
+			$('<div/>', { id: 'flow' }).appendTo('.player');
+			$("#flow").flowplayer({
+				fullscreen: true,
+				native_fullscreen: true,
+			    clip: {
+			        sources: [
+			              { type: "video/mp4",
+			                src:  $scope.videoString(filename) }
+			        ]
+			    }
+			});
+
+			$('.fp-embed').remove();
+			$('.fp-brand').remove();
+			$('a[href*="flowplayer"]').remove();
+			$('.fp-context-menu').addClass('hidden');
+			$('.fp-volume').css('right', '40px');
+		}
+	};
+
 	$interval(function() {
 		if ($scope.videoFile && $scope.sessionNumber) {
 			var pingObj = {};
@@ -179,22 +212,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				$cookies.put('username', $scope.fields.username);
 				//$scope.fields.password = "";
 
-				$(".player").flowplayer({
-					fullscreen: true,
-					native_fullscreen: true,
-				    clip: {
-				        sources: [
-				              { type: "video/mp4",
-				                src:  $scope.videoString($scope.activeVideo) }
-				        ]
-				    }
-				});
-
-				$('.fp-embed').remove();
-				$('.fp-brand').remove();
-				$('a[href*="flowplayer"]').remove();
-				$('.fp-context-menu').addClass('hidden');
-				$('.fp-volume').css('right', '40px');
+				$scope.setVideo();
 
 				$scope.verify();
 				//load list of videos from the server
@@ -213,6 +231,16 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 					$("#upload").prop('disabled', false);
 					$("#file").replaceWith($("#file").clone());
 				} catch (e) {}
+			}
+		});
+	});
+
+	$scope.socket.on('list', function (videoList){
+		$scope.$apply(function () {
+			$scope.videoList = videoList;
+			if (!$scope.video.activeVideo) {
+				$scope.video.activeVideo = $scope.videoList[0];
+				$scope.setVideo();
 			}
 		});
 	});
