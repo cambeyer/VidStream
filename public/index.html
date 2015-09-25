@@ -35,13 +35,30 @@
 		</div>
 
 		<div ng-show="authed" drag-and-drop style="height: 100%">
-			<button ng-click="logout()">Logout</button>
-			<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
-			<div ng-show="progress" style="width: 200px; height: 20px; margin: 20px"><progress-bar></progress-bar></div>
-			<ul>
-				<li ng-repeat="video in videoList"><span ng-click="setVideo(video.filename)">{{video.details.original}} ({{video.filename}})</span> <span ng-click="deleteVideo(video.filename)">(Delete)</span></li>
-			</ul>
-			<div style="padding: 20px">
+			<div style="text-align: center">
+				<button ng-click="logout()">Logout</button>
+				<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
+				<div ng-show="progress" style="width: 200px; height: 20px; margin: 20px"><progress-bar></progress-bar></div>
+			</div>
+			<table cellpadding="20" cellspacing="0" border="0" width="100%">
+				<tr>
+					<td align="center">
+						<table cellpadding="20" cellspacing="0" border="1">
+							<tr>
+								<td><b>Original File Name</b></td>
+								<!--<td><b>MD5 Hash</b></td>-->
+								<td><b>Delete</b></td>
+							</tr>
+							<tr ng-repeat="video in videoList">
+								<td ng-bind="video.details.original" ng-click="setVideo(video.filename)"></td>
+								<!--<td ng-bind="video.filename"></td>-->
+								<td ng-click="deleteVideo(video.filename)">Delete</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+			</table>
+			<div style="padding: 20px; text-align: center">
 				<div class="player"></div>
 			</div>
 		</div>
