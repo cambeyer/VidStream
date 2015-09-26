@@ -50,39 +50,41 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	};
 
 	$scope.uploadFile = function () {
-		var oData = new FormData();
-		oData.append("username", $scope.fields.username);
-		oData.append("session", $scope.sessionNumber);
-		oData.append("date", $scope.encrypt(Date.now().toString()));
-		oData.append("viewers", JSON.stringify($scope.viewers));
-		$scope.viewers = [];
-		oData.append("file", document.getElementById("file").files[0]);
-		var filename = document.getElementById("file").files[0].name;
-		$scope.uploading[filename] = {};
-		$scope.uploading[filename].percent = 0;
-		var oReq = new XMLHttpRequest();
-		oReq.upload.addEventListener('progress', function (e) {
-			$scope.$apply(function () {
-				$scope.uploading[filename].percent = Math.floor(e.loaded / e.total * 100).toFixed(0);
-			});
-		}, false);
-		oReq.open("post", "upload", true);
-		oReq.responseType = "text";
-		oReq.onreadystatechange = function () {
-			if (oReq.readyState == 4 && oReq.status == 200) {
-				var md5 = oReq.response;
+		if (document.getElementById("file").files.length > 0) {
+			var oData = new FormData();
+			oData.append("username", $scope.fields.username);
+			oData.append("session", $scope.sessionNumber);
+			oData.append("date", $scope.encrypt(Date.now().toString()));
+			oData.append("viewers", JSON.stringify($scope.viewers));
+			$scope.viewers = [];
+			oData.append("file", document.getElementById("file").files[0]);
+			var filename = document.getElementById("file").files[0].name;
+			$scope.uploading[filename] = {};
+			$scope.uploading[filename].percent = 0;
+			var oReq = new XMLHttpRequest();
+			oReq.upload.addEventListener('progress', function (e) {
 				$scope.$apply(function () {
-					delete $scope.uploading[filename];
-					$scope.processing[md5] = {};
-					$scope.processing[md5].percent = 0;
-					$scope.sendSubscriptions();
+					$scope.uploading[filename].percent = Math.floor(e.loaded / e.total * 100).toFixed(0);
 				});
-			} else if (oReq.readyState == 4 && oReq.status !== 200) {
-				alert("There was an error uploading your file");
-			}
-		};
-		$("#file").replaceWith($("#file").clone());
-		oReq.send(oData);
+			}, false);
+			oReq.open("post", "upload", true);
+			oReq.responseType = "text";
+			oReq.onreadystatechange = function () {
+				if (oReq.readyState == 4 && oReq.status == 200) {
+					var md5 = oReq.response;
+					$scope.$apply(function () {
+						delete $scope.uploading[filename];
+						$scope.processing[md5] = {};
+						$scope.processing[md5].percent = 0;
+						$scope.sendSubscriptions();
+					});
+				} else if (oReq.readyState == 4 && oReq.status !== 200) {
+					alert("There was an error uploading your file");
+				}
+			};
+			$("#file").replaceWith($("#file").clone());
+			oReq.send(oData);
+		}
 	};
 
 	$scope.socket.on('reconnect', function (num) {
@@ -103,6 +105,12 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		$scope.confirmPassword = false;
 		$scope.fields.passwordConfirm = "";
 		$scope.fields.username = $scope.fields.username.replace(/\W/g, '');
+	};
+
+	$scope.checkViewers = function () {
+		for (var i = 0; i < $scope.viewers.length; i++) {
+			$scope.viewers[i].username = $scope.viewers[i].username.replace(/\W/g, '');
+		}
 	};
 
 	$scope.encrypt = function (text) {
@@ -127,6 +135,16 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		delReq['file'] = $scope.encrypt(filename);
 		if (confirm("Do you really want to delete this video?")) {
 			$scope.socket.emit('delete', delReq);
+		}
+	};
+
+	$scope.removeMe = function (filename) {
+		var remReq = {};
+		remReq['username'] = $scope.fields.username;
+		remReq['session'] = $scope.sessionNumber;
+		remReq['file'] = $scope.encrypt(filename);
+		if (confirm("Do you really want to remove your access to this video?")) {
+			$scope.socket.emit('remove', remReq);
 		}
 	};
 

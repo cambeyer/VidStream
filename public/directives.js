@@ -31,10 +31,10 @@ angular.module('VidStreamApp.directives', [])
 					'<tr>' +
 						'<td>Username:</td>' +
 						'<td>' +
-							'<input id="username" ng-disabled="hash" class="loginctrl" type="text" ng-change="resetControls()" ng-model="fields.username" ng-trim="false" maxlength="20">' +
+							'<input id="username" class="loginctrl" type="text" ng-change="resetControls(this)" ng-model="fields.username" ng-trim="false" maxlength="20">' +
 						'</td>' +
 					'</tr>' +
-					'<tr ng-show="!hash">' +
+					'<tr>' +
 						'<td>Password:</td>' +
 						'<td>' +
 							'<input id="password" class="loginctrl" type="password" maxlength="128" ng-model="fields.password">' +
@@ -48,7 +48,7 @@ angular.module('VidStreamApp.directives', [])
 					'</tr>' +
 					'<tr>' +
 						'<td colspan="2">' +
-							'<input ng-show="!loading && !hash" class="mySubmit" type="submit" value="">' +
+							'<input ng-show="!loading" class="mySubmit" type="submit" value="">' +
 							'<span ng-show="loading"><img src="loading.gif" style="max-width: 60px"></span>' +
 						'</td>' +
 					'</tr>' +

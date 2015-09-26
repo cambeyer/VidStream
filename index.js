@@ -66,12 +66,34 @@ app.route('/upload').post(function (req, res, next) {
 	req.busboy.on('file', function (fieldname, stream, name) {
 		console.log("Uploading file: " + name);
 		var filename = dir + path.basename(name);
+		var num = 0;
+		var exists = true;
+		while (exists) {
+			try {
+				fs.accessSync(filename + num, fs.F_OK);
+				filename = filename + num;
+				exists = false;
+			} catch (e) {
+				num = num + 1;
+			}
+		}
 		var fstream = fs.createWriteStream(filename);
 		stream.on('data', function (chunk) {
 			hash.update(chunk);
 		});
 		fstream.on('close', function () {
 			md5 = hash.digest('hex');
+			var num = 0;
+			var exists = true;
+			while (exists) {
+				try {
+					fs.accessSync(dir + md5 + num + ".mp4", fs.F_OK);
+					md5 = md5 + num;
+					exists = false;
+				} catch (e) {
+					num = num + 1;
+				}
+			}
 			res.writeHead(200, { Connection: 'close' });
       		res.end(md5);
 
@@ -116,7 +138,9 @@ app.route('/upload').post(function (req, res, next) {
 						vidDetails['permissions'].push({ username: sessionVars.username, isowner: "true" });
 						var viewers = JSON.parse(sessionVars.viewers);
 						for (var i = 0; i < viewers.length; i++) {
-							vidDetails['permissions'].push({ username: viewers[i].username, isowner: "false" });
+							if (viewers[i].username !== sessionVars.username) { //make sure the owner isnt denied permission to edit their own file
+								vidDetails['permissions'].push({ username: viewers[i].username, isowner: "false" });
+							}
 						}
 						db.videos.insert(vidDetails, function (err) {
 							if (!err) {
@@ -410,6 +434,27 @@ io.on('connection', function (socket) {
 							for (var i = 0; i < affected.length; i++) {
 								sendList(affected[i]);
 							}
+						}
+					});
+				}
+			});
+		}
+	});
+	socket.on('remove', function (remReq) {
+		var md5 = decrypt(remReq.username, remReq.session, remReq.file);
+		if (md5) {
+			db.videos.findOne({ filename: md5 }, function (err, video) {
+				if (!err) {
+					for (var i = 0; i < video.permissions.length; i++) {
+						if (video.permissions[i].username == remReq.username) {
+							video.permissions.splice(i, 1);
+							break;
+						}
+					}
+					db.videos.update({ filename: md5 }, { $set: { permissions: video.permissions } }, function (err) {
+						if (!err) {
+							console.log("Removed access for " + remReq.username + " to " + md5);
+							sendList(remReq.username);
 						}
 					});
 				}

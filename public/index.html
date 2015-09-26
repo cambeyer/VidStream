@@ -38,12 +38,31 @@
 			<div style="text-align: center">
 				<button ng-click="logout()">Logout</button>
 				<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
-				<div ng-repeat="user in viewers">
-				    <label>Viewer:</label>
-				    <input ng-model="user.username" type="text"/>
-				    <button ng-click="viewers.splice($index, 1)">Remove</button>
-				</div>
-				<button ng-click="viewers.push({username: ''})">Add</button>
+				<table cellpadding="0" cellspacing="0" border="0" width="100%">
+					<tr>
+						<td align="center">
+							<table ng-if="viewers.length > 0" cellpadding="20" cellspacing="0" border="0" style="border: 1px solid black; margin-top: 20px">
+								<tr>
+									<td>Viewer</td>
+									<td>Action</td>
+								</tr>
+								<tr ng-repeat="user in viewers">
+									<td>
+										<input ng-model="user.username" ng-change="checkViewers()" ng-trim="false" maxlength="20" class="loginctrl" type="text"/>
+									</td>
+									<td>
+										<button ng-click="viewers.splice($index, 1)">Remove</button>
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td align="center" style="padding-top: 20px">
+							<button ng-click="viewers.push({username: ''})">Add Viewer</button>
+						</td>
+					</tr>
+				</table>
 				<table ng-if="!(uploading | isEmpty) || !(processing | isEmpty)" cellpadding="20" cellspacing="0" border="0" width="100%">
 					<tr ng-hide="uploading | isEmpty" ng-repeat="(file, details) in uploading">
 						<td align="center">
@@ -60,14 +79,6 @@
 						</td>
 					</tr>
 				</table>
-				<!--
-				<div ng-hide="uploading | isEmpty" style="padding: 20px">
-					<div ng-repeat="(file, details) in uploading" style="width: 400px; height: 20px; margin: auto"><progress-bar file="file" percent="details.percent" bartype="uploading"></progress-bar></div>
-				</div>
-				<div ng-hide="processing | isEmpty" style="padding: 20px">
-					<div ng-repeat="(md5, details) in processing" style="width: 400px; height: 20px; margin: auto"><progress-bar percent="details.percent" bartype="processing"></progress-bar></div>
-				</div>
-				-->
 			</div>
 			<table ng-if="!(videoList | isEmpty)" cellpadding="20" cellspacing="0" border="0" width="100%">
 				<tr>
@@ -80,7 +91,7 @@
 							<tr ng-repeat="video in videoList | orderBy: 'details.original'">
 								<td ng-bind="video.details.original" ng-click="setVideo(video.filename)"></td>
 								<td ng-if="video.edit" ng-click="deleteVideo(video.filename)">Delete</td>
-								<td ng-if="!video.edit">NA</td>
+								<td ng-if="!video.edit" ng-click="removeMe(video.filename)">Remove</td>
 							</tr>
 						</table>
 					</td>
