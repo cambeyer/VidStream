@@ -163,8 +163,10 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 				native_fullscreen: true,
 			    clip: {
 			        sources: [
-			              { type: "video/mp4",
-			                src:  $scope.videoString($scope.activeVideo.filename) }
+			              {
+			              	type: "video/mp4",
+			                src:  $scope.videoString($scope.activeVideo.filename)
+			              }
 			        ]
 			    }
 			});

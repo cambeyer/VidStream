@@ -87,7 +87,7 @@ app.route('/upload').post(function (req, res, next) {
 			var exists = true;
 			while (exists) {
 				try {
-					fs.statSync(dir + md5 + num + ".mp4");
+					fs.statSync(dir + md5 + num);
 					num = num + 1;
 				} catch (e) {
 					md5 = md5 + num;
@@ -132,7 +132,7 @@ app.route('/upload').post(function (req, res, next) {
 					if (date) {
 						//username: sessionVars.username
 						var vidDetails = {};
-						vidDetails['filename'] = md5 + ".mp4";
+						vidDetails['filename'] = md5;
 						vidDetails['details'] = { date: date, original: name }; //populate this with title, description, etc.
 						vidDetails['permissions'] = [];
 						vidDetails['permissions'].push({ username: sessionVars.username, isowner: "true" });
@@ -157,7 +157,7 @@ app.route('/upload').post(function (req, res, next) {
 				.on('error', function (err, stdout, stderr) {
 					console.log("Transcoding issue: " + err + stderr);
 				})
-				.save(dir + md5 + ".mp4");
+				.save(dir + md5);
 		});
 		stream.pipe(fstream);
 	});
@@ -199,6 +199,7 @@ app.get('/download', function (req, res){
 
 			fs.stat(file, function (err, stats) {
 				if (err) {
+					deleteVideo(filename);
 					return;
 				}
 				var total = stats.size;
@@ -232,6 +233,7 @@ app.get('/download', function (req, res){
 		} else {
 			fs.stat(file, function (err, stats) {
 				if (err) {
+					deleteVideo(filename);
 					return;
 				}
 				var total = stats.size;
@@ -332,23 +334,6 @@ var encrypt = function(username, sessionNumber, text, disregardVerification) {
 	}
 };
 
-var fetchVideos = function (username) {
-
-	/*
-	var result = getFiles(dir);
-	for (var i = 0; i < result.length; i++) {
-		if (result[i].substr(result[i].length - 4, 4) !== ".mp4") {
-			result.splice(i, 1);
-			i--;
-			continue;
-		}
-		result[i] = result[i].split('/')[result[i].split('/').length - 1];
-		result[i] = { filename: result[i], details: {} };
-	}
-	return result;
-	*/
-};
-
 var sendList = function (username, socket) {
 	var vidList = {};
 	vidList['username'] = username;
@@ -362,6 +347,28 @@ var sendList = function (username, socket) {
 						socket.emit('list', vidList);
 					} else {
 						io.emit('list', vidList);
+					}
+				}
+			});
+		}
+	});
+};
+
+var deleteVideo = function (md5) {
+	db.videos.findOne({ filename: md5 }, function(err, video) {
+		if (!err) {
+			var affected = [];
+			for (var i = 0; i < video.permissions.length; i++) {
+				affected.push(video.permissions[i].username);
+			}
+			db.videos.remove({ filename: md5 }, {}, function (err, numRemoved) {
+				if (!err) {
+					try {
+						fs.unlinkSync(dir + md5);
+					} catch (e) { }
+					console.log("Deleted " + md5);
+					for (var i = 0; i < affected.length; i++) {
+						sendList(affected[i]);
 					}
 				}
 			});
@@ -421,23 +428,7 @@ io.on('connection', function (socket) {
 	socket.on('delete', function (delReq) {
 		var md5 = decrypt(delReq.username, delReq.session, delReq.file);
 		if (md5) {
-			db.videos.findOne({ filename: md5 }, function(err, video) {
-				if (!err) {
-					var affected = [];
-					for (var i = 0; i < video.permissions.length; i++) {
-						affected.push(video.permissions[i].username);
-					}
-					db.videos.remove({ filename: md5 }, {}, function (err, numRemoved) {
-						if (!err) {
-							fs.unlinkSync(dir + md5);
-							console.log("Deleted " + md5);
-							for (var i = 0; i < affected.length; i++) {
-								sendList(affected[i]);
-							}
-						}
-					});
-				}
-			});
+			deleteVideo(md5);
 		}
 	});
 	socket.on('remove', function (remReq) {
