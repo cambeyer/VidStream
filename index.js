@@ -70,11 +70,11 @@ app.route('/upload').post(function (req, res, next) {
 		var exists = true;
 		while (exists) {
 			try {
-				fs.accessSync(filename + num, fs.F_OK);
+				fs.statSync(filename + num);
+				num = num + 1;
+			} catch (e) {
 				filename = filename + num;
 				exists = false;
-			} catch (e) {
-				num = num + 1;
 			}
 		}
 		var fstream = fs.createWriteStream(filename);
@@ -87,11 +87,11 @@ app.route('/upload').post(function (req, res, next) {
 			var exists = true;
 			while (exists) {
 				try {
-					fs.accessSync(dir + md5 + num + ".mp4", fs.F_OK);
+					fs.statSync(dir + md5 + num + ".mp4");
+					num = num + 1;
+				} catch (e) {
 					md5 = md5 + num;
 					exists = false;
-				} catch (e) {
-					num = num + 1;
 				}
 			}
 			res.writeHead(200, { Connection: 'close' });
@@ -138,7 +138,7 @@ app.route('/upload').post(function (req, res, next) {
 						vidDetails['permissions'].push({ username: sessionVars.username, isowner: "true" });
 						var viewers = JSON.parse(sessionVars.viewers);
 						for (var i = 0; i < viewers.length; i++) {
-							if (viewers[i].username !== sessionVars.username) { //make sure the owner isnt denied permission to edit their own file
+							if (viewers[i].username && viewers[i].username !== sessionVars.username) { //make sure the owner isnt denied permission to edit their own file
 								vidDetails['permissions'].push({ username: viewers[i].username, isowner: "false" });
 							}
 						}
