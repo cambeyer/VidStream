@@ -88,7 +88,7 @@
 								<td><b>Original File Name</b></td>
 								<td><b>Delete</b></td>
 							</tr>
-							<tr ng-repeat="video in videoList | orderBy: 'details.original'">
+							<tr ng-repeat="video in videoList | orderBy: 'details.original'" ng-class="{'activevideo': video.filename == activeVideo.filename}">
 								<td ng-bind="video.details.original" ng-click="setVideo(video.filename)"></td>
 								<td ng-if="video.edit" ng-click="deleteVideo(video.filename)">Delete</td>
 								<td ng-if="!video.edit" ng-click="removeMe(video.filename)">Remove</td>

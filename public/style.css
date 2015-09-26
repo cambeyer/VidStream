@@ -51,6 +51,10 @@ html, body {
   background-color: green;
 }
 
+.activevideo {
+  background-color: yellow;
+}
+
 a:link {
     color: black;
 }
