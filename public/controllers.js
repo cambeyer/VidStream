@@ -7,6 +7,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 	$scope.uploading = {};
 	$scope.processing = {};
 
+	$scope.viewers = [];
+
 	$scope.activeVideo = {
 		filename: ''
 	};
@@ -52,6 +54,8 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		oData.append("username", $scope.fields.username);
 		oData.append("session", $scope.sessionNumber);
 		oData.append("date", $scope.encrypt(Date.now().toString()));
+		oData.append("viewers", JSON.stringify($scope.viewers));
+		$scope.viewers = [];
 		oData.append("file", document.getElementById("file").files[0]);
 		var filename = document.getElementById("file").files[0].name;
 		$scope.uploading[filename] = {};
@@ -93,7 +97,7 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		for (var md5 in $scope.processing) {
 			$scope.socket.emit('subscribe', md5);
 		}
-	}
+	};
 
 	$scope.resetControls = function () {
 		$scope.confirmPassword = false;
@@ -253,10 +257,16 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		});
 	});
 
-	$scope.socket.on('list', function (videoList){
+	$scope.socket.on('list', function (videoList) {
 		$scope.$apply(function () {
 			if (videoList.username == $scope.fields.username) {
-				$scope.videoList = videoList.videos;
+				for (var i = 0; i < videoList.edit.length; i++) {
+					videoList.edit[i].edit = true;
+				}
+				for (var i = 0; i < videoList.view.length; i++) {
+					videoList.view[i].edit = false;
+				}
+				$scope.videoList = $.extend([], videoList.edit, videoList.view);
 				var found = false;
 				for (var i = 0; i < $scope.videoList.length; i++) {
 					if ($scope.videoList[i].filename == $scope.activeVideo.filename) {

@@ -108,13 +108,22 @@ app.route('/upload').post(function (req, res, next) {
 						console.log("Completed without an active listener");
 					}
 					if (date) {
+						//username: sessionVars.username
 						var vidDetails = {};
 						vidDetails['filename'] = md5 + ".mp4";
-						vidDetails['details'] = { username: sessionVars.username, date: date, original: name }; //populate this with title, description, etc.
+						vidDetails['details'] = { date: date, original: name }; //populate this with title, description, etc.
+						vidDetails['permissions'] = [];
+						vidDetails['permissions'].push({ username: sessionVars.username, isowner: "true" });
+						var viewers = JSON.parse(sessionVars.viewers);
+						for (var i = 0; i < viewers.length; i++) {
+							vidDetails['permissions'].push({ username: viewers[i].username, isowner: "false" });
+						}
 						db.videos.insert(vidDetails, function (err) {
 							if (!err) {
 								fs.unlinkSync(filename); //remove the initially uploaded file... could retain this for auditing purposes
-								sendList(sessionVars.username);
+								for (var i = 0; i < vidDetails.permissions.length; i++) {
+									sendList(vidDetails.permissions[i].username);
+								}
 							} else {
 								console.log("DB insert error");
 							}
@@ -319,14 +328,19 @@ var fetchVideos = function (username) {
 var sendList = function (username, socket) {
 	var vidList = {};
 	vidList['username'] = username;
-	db.videos.find({ "details.username": username }, function (err, videos) {
+	db.videos.find({ permissions: { username: username, isowner: "true" } }, { permissions: 0, _id: 0 }, function (err, videos) {
 		if (!err) {
-			vidList['videos'] = videos;
-			if (socket) {
-				socket.emit('list', vidList);
-			} else {
-				io.emit('list', vidList);
-			}
+			vidList['edit'] = videos;
+			db.videos.find({ permissions: { username: username, isowner: "false" } }, { permissions: 0, _id: 0 }, function (err, videos) {
+				if (!err) {
+					vidList['view'] = videos;
+					if (socket) {
+						socket.emit('list', vidList);
+					} else {
+						io.emit('list', vidList);
+					}
+				}
+			});
 		}
 	});
 };
@@ -383,11 +397,21 @@ io.on('connection', function (socket) {
 	socket.on('delete', function (delReq) {
 		var md5 = decrypt(delReq.username, delReq.session, delReq.file);
 		if (md5) {
-			db.videos.remove({ filename: md5 }, {}, function (err, numRemoved) {
+			db.videos.findOne({ filename: md5 }, function(err, video) {
 				if (!err) {
-					fs.unlinkSync(dir + md5);
-					console.log("Deleted " + md5);
-					sendList(delReq.username);
+					var affected = [];
+					for (var i = 0; i < video.permissions.length; i++) {
+						affected.push(video.permissions[i].username);
+					}
+					db.videos.remove({ filename: md5 }, {}, function (err, numRemoved) {
+						if (!err) {
+							fs.unlinkSync(dir + md5);
+							console.log("Deleted " + md5);
+							for (var i = 0; i < affected.length; i++) {
+								sendList(affected[i]);
+							}
+						}
+					});
 				}
 			});
 		}

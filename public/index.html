@@ -38,6 +38,12 @@
 			<div style="text-align: center">
 				<button ng-click="logout()">Logout</button>
 				<input type="file" id="file" style="margin: 20px"><button id="upload" ng-click="uploadFile()">Upload</button>
+				<div ng-repeat="user in viewers">
+				    <label>Viewer:</label>
+				    <input ng-model="user.username" type="text"/>
+				    <button ng-click="viewers.splice($index, 1)">Remove</button>
+				</div>
+				<button ng-click="viewers.push({username: ''})">Add</button>
 				<table ng-if="!(uploading | isEmpty) || !(processing | isEmpty)" cellpadding="20" cellspacing="0" border="0" width="100%">
 					<tr ng-hide="uploading | isEmpty" ng-repeat="(file, details) in uploading">
 						<td align="center">
@@ -63,19 +69,18 @@
 				</div>
 				-->
 			</div>
-			<table cellpadding="20" cellspacing="0" border="0" width="100%">
+			<table ng-if="!(videoList | isEmpty)" cellpadding="20" cellspacing="0" border="0" width="100%">
 				<tr>
 					<td align="center">
 						<table cellpadding="20" cellspacing="0" border="1">
 							<tr>
 								<td><b>Original File Name</b></td>
-								<!--<td><b>MD5 Hash</b></td>-->
 								<td><b>Delete</b></td>
 							</tr>
 							<tr ng-repeat="video in videoList | orderBy: 'details.original'">
 								<td ng-bind="video.details.original" ng-click="setVideo(video.filename)"></td>
-								<!--<td ng-bind="video.filename"></td>-->
-								<td ng-click="deleteVideo(video.filename)">Delete</td>
+								<td ng-if="video.edit" ng-click="deleteVideo(video.filename)">Delete</td>
+								<td ng-if="!video.edit">NA</td>
 							</tr>
 						</table>
 					</td>
