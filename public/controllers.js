@@ -4,9 +4,8 @@ angular.module('VidStreamApp', ['VidStreamApp.controllers', 'VidStreamApp.direct
 //main Angular module
 angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainController', function ($scope, $rootScope, $interval, $timeout, $cookies, $document, $window, $sce) {
 
-	$scope.progress = false;
-	$scope.uploadPercent = 0;
-	$scope.processPercent = 0;
+	$scope.uploading = {};
+	$scope.processing = {};
 
 	$scope.activeVideo = {
 		filename: ''
@@ -54,27 +53,31 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		oData.append("session", $scope.sessionNumber);
 		oData.append("date", $scope.encrypt(Date.now().toString()));
 		oData.append("file", document.getElementById("file").files[0]);
+		var filename = document.getElementById("file").files[0].name;
+		$scope.uploading[filename] = {};
+		$scope.uploading[filename].percent = 0;
 		var oReq = new XMLHttpRequest();
 		oReq.upload.addEventListener('progress', function (e) {
 			$scope.$apply(function () {
-				$scope.uploadPercent = Math.floor(e.loaded / e.total * 100).toFixed(0);
+				$scope.uploading[filename].percent = Math.floor(e.loaded / e.total * 100).toFixed(0);
 			});
 		}, false);
 		oReq.open("post", "upload", true);
 		oReq.responseType = "text";
 		oReq.onreadystatechange = function () {
 			if (oReq.readyState == 4 && oReq.status == 200) {
-				$scope.socket.emit('subscribe', oReq.response);
+				var md5 = oReq.response;
 				$scope.$apply(function () {
-					$scope.uploadPercent = 0;
+					delete $scope.uploading[filename];
+					$scope.processing[md5] = {};
+					$scope.processing[md5].percent = 0;
+					$scope.sendSubscriptions();
 				});
 			} else if (oReq.readyState == 4 && oReq.status !== 200) {
 				alert("There was an error uploading your file");
 			}
 		};
-		$("#file").prop('disabled', true);
-		$("#upload").prop('disabled', true);
-		$scope.progress = true;
+		$("#file").replaceWith($("#file").clone());
 		oReq.send(oData);
 	};
 
@@ -82,8 +85,15 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 		console.log("Reconnect");
 		$scope.$apply(function () {
 			$scope.verify();
+			$scope.sendSubscriptions();
 		});
 	});
+
+	$scope.sendSubscriptions = function() {
+		for (var md5 in $scope.processing) {
+			$scope.socket.emit('subscribe', md5);
+		}
+	}
 
 	$scope.resetControls = function () {
 		$scope.confirmPassword = false;
@@ -233,14 +243,11 @@ angular.module('VidStreamApp.controllers', ['ngCookies']).controller('mainContro
 
 	$scope.socket.on('progress', function (msg){
 		$scope.$apply(function () {
-			$scope.processPercent = Math.floor(msg).toFixed(0);
-			if ($scope.processPercent >= 100) {
+			var percent = Math.floor(msg.percent).toFixed(0);
+			$scope.processing[msg.md5].percent = percent;
+			if (percent >= 100) {
 				try {
-					$scope.progress = false;
-					$scope.processPercent = 0;
-					$("#file").prop('disabled', false);
-					$("#upload").prop('disabled', false);
-					$("#file").replaceWith($("#file").clone());
+					delete $scope.processing[msg.md5];
 				} catch (e) {}
 			}
 		});

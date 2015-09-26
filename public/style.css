@@ -43,6 +43,14 @@ html, body {
 	width: 100%;
 }
 
+.uploading {
+  background-color: blue;
+}
+
+.processing {
+  background-color: green;
+}
+
 a:link {
     color: black;
 }

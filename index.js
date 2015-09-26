@@ -92,20 +92,20 @@ app.route('/upload').post(function (req, res, next) {
 				})
 				.on('progress', function (progress) {
 					if (processing[md5]) {
-						processing[md5].emit('progress', progress.percent);
+						processing[md5].emit('progress', { md5: md5, percent: progress.percent });
 					} else if (progress.percent > 50) {
 						console.log("Transcoding without a client listener (>50%)");
 					}
 					//console.log('Transcoding: ' + progress.percent + '% done');
 				})
 				.on('end', function () {
-					if (processing[md5]) {
-						processing[md5].emit('progress', 100);
+					if (processing[md5] && !processing[md5].disconnected) {
+						processing[md5].emit('progress', { md5: md5, percent: 100 });
 						delete processing[md5];
 						console.log('File has been transcoded successfully: ' + md5);
 					} else {
 						done.push(md5);
-						console.log("Completed without ever receiving a listener");
+						console.log("Completed without an active listener");
 					}
 					if (date) {
 						var vidDetails = {};
@@ -332,18 +332,24 @@ var sendList = function (username, socket) {
 };
 
 io.on('connection', function (socket) {
+	socket.disconnected = false;
+	socket.on('disconnect', function () {
+		socket.disconnected = true;
+	});
 	socket.on('subscribe', function (md5) {
 		console.log("Subscription from client for processing updates " + md5);
 		for (var i = 0; i < done.length; i++) {
 			if (done[i] == md5) {
 				console.log("File finished transcoding before client subscription; sending success");
-				socket.emit('progress', 100);
+				socket.emit('progress', { md5: md5, percent: 100 });
 				done.splice(i, 1);
 				return;
 			}
 		}
+		if (!processing[md5]) {
+			socket.emit('progress', { md5: md5, percent: 0 });
+		}
 		processing[md5] = socket;
-		socket.emit('progress', 0);
 	});
 	socket.on('new', function (newUser) {
 		var userObj = {};

@@ -274,12 +274,25 @@ directive('uploadForm', function ($rootScope) {
 	};
 }).directive('progressBar', function ($document) {
 	return {
-		scope: false,
 		restrict: 'E',
+		scope: {
+            percent: '=',
+            bartype: '@',
+            file: '='
+        },
 		template: '' +
-			'<div ng-style="{\'width\': width + \'px\'}" style="height: 100%; background-color: gray; float: left"><div ng-style="{\'width\': uploadPercent + \'%\'}" style="height: 100%; background-color: blue; float: left">&nbsp</div><div ng-style="{\'width\': processPercent + \'%\'}" style="height: 100%; background-color: green; float: left">&nbsp</div></div><div style="float: right; width: 50px; text-align: right"><span ng-if="uploadPercent > 0">{{uploadPercent}}</span><span ng-if="processPercent > 0">{{processPercent}}</span><span ng-if="uploadPercent == 0 && processPercent == 0">0</span>%</div>',
+			'<p ng-if="file" ng-bind="file | limitTo: 50" style="white-space: nowrap"></p><p ng-if="!file"><b>Processing</b></p><div ng-style="{\'width\': width + \'px\'}" style="height: 100%; background-color: gray; float: left"><div ng-class="{\'uploading\': bartype == \'uploading\', \'processing\': bartype == \'processing\'}" ng-style="{\'width\': percent + \'%\'}" style="height: 100%; float: left">&nbsp</div></div><div style="float: right; width: 50px; text-align: right">{{percent}}%</div>',
 		link: function (scope, element, attrs) {
 			scope.width = element.parent()[0].offsetWidth - 50;
 		}
+	};
+}).filter('isEmpty', function () {
+	return function (obj) {
+		for (var bar in obj) {
+			if (obj.hasOwnProperty(bar)) {
+				return false;
+			}
+		}
+		return true;
 	};
 });
