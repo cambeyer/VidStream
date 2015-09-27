@@ -468,6 +468,6 @@ io.on('connection', function (socket) {
 	});
 });
 
-http.listen(8888, "0.0.0.0", function (){
-	console.log('listening on *:8888');
+http.listen(80, "0.0.0.0", function (){
+	console.log('listening on *:80');
 });

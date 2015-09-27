@@ -23,3 +23,7 @@ sudo apt-get install -y ffmpeg
 sudo echo "KEY HERE" >> ~/.ssh/authorized_keys
 #run the cloud9 installer for hooking in from the interface
 curl -sL https://raw.githubusercontent.com/c9/install/master/install.sh | sudo bash
+#install libcap2-bin to allow port 80 binding
+sudo apt-get install libcap2-bin
+#allow nodejs to bind to port 80
+sudo setcap cap_net_bind_service=+ep /usr/bin/nodejs
